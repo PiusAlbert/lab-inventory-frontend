@@ -13,6 +13,7 @@ const NAV = [
   { to: "/items",        label: "Items",         icon: "📦" },
   { to: "/batches",      label: "Stock Batches", icon: "🗂" },
   { to: "/transactions", label: "Transactions",  icon: "↕" },
+  { to: "/reports",      label: "Reports",       icon: "📊" },
 ]
 
 export default function Layout({ children }) {

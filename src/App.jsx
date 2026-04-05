@@ -11,6 +11,7 @@ import AddItem      from "./pages/AddItem";
 import StockBatches from "./pages/Batches";
 import Transactions from "./pages/Transactions";
 import ItemDetails  from "./pages/ItemDetails";
+import Reports      from "./pages/Reports";
 
 export default function App() {
   return (
@@ -86,6 +87,16 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Layout><Transactions /></Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ── Reports ────────────────────────────────── */}
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <Layout><Reports /></Layout>
             </ProtectedRoute>
           }
         />
