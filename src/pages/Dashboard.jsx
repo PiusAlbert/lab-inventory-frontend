@@ -58,7 +58,7 @@ const Dashboard = () => {
         <DashboardCard title="Total Items"     value={data.total_items} />
         <DashboardCard title="Low Stock"       value={data.low_stock} />
         <DashboardCard title="Expiring Soon"   value={data.expiring_soon} />
-        <DashboardCard title="Inventory Value" value={`$${data.inventory_value ?? 0}`} />
+        <DashboardCard title="Inventory Value" value={`TZS ${(data.inventory_value ?? 0).toLocaleString()}`} />
       </div>
 
       {/* ALERTS + INSIGHTS */}
