@@ -169,7 +169,7 @@ export default function Layout({ children }) {
                 marginTop: "2px",
               }}
             >
-              DECOHAS Labs
+              DIST Labs
             </p>
           </div>
         </div>

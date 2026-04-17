@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom"
 import { fetchItemById } from "../services/itemsApi"
 import { fetchItemBatches } from "../services/batchesApi"
 import { fetchTransactions } from "../services/transactionsApi"
+import { useAuth } from "../context/AuthContext"
 import IssueStockModal from "../components/IssueStockModal"
 import ReceiveStockModal from "../components/ReceiveStockModal"
 import EditBatchModal from "../components/EditBatchModal"
@@ -42,6 +43,7 @@ function Field({ label, value, mono = false }) {
 
 function ChemicalDetails({ d }) {
   if (!d) return null
+
   return (
     <div className="bg-blue-50 border border-blue-100 rounded-lg p-6">
       <h3 className="text-sm font-semibold text-blue-800 mb-4">Chemical details</h3>
@@ -74,6 +76,7 @@ function ChemicalDetails({ d }) {
 
 function EquipmentDetails({ d }) {
   if (!d) return null
+
   return (
     <div className="bg-teal-50 border border-teal-100 rounded-lg p-6">
       <h3 className="text-sm font-semibold text-teal-800 mb-4">Equipment details</h3>
@@ -99,6 +102,7 @@ function EquipmentDetails({ d }) {
 
 function ReferenceDetails({ d }) {
   if (!d) return null
+
   const days = daysUntil(d.certification_expiry)
 
   return (
@@ -169,6 +173,7 @@ function ExpiryPill({ date }) {
 export default function ItemDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { isAdmin, requiresLabSelection } = useAuth()
 
   const [item, setItem] = useState(null)
   const [batches, setBatches] = useState([])
@@ -179,6 +184,13 @@ export default function ItemDetails() {
   const [issueModal, setIssueModal] = useState(false)
   const [receiveModal, setReceiveModal] = useState(false)
   const [editBatch, setEditBatch] = useState(null)
+
+  const labRequired = isAdmin && requiresLabSelection
+
+  const guardedAction = (fn) => {
+    if (labRequired) return
+    fn()
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -270,6 +282,16 @@ export default function ItemDetails() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {labRequired && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4">
+          <p className="font-medium text-sm mb-1">Select a laboratory first</p>
+          <p className="text-sm">
+            As Super Admin, you can review this item, but to edit it, receive stock,
+            issue stock, or edit batches, you must first choose a laboratory from the top bar.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
           <button
@@ -314,20 +336,40 @@ export default function ItemDetails() {
 
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => navigate(`/items/${item.id}/edit`)}
-            className="px-4 py-2 text-sm border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50"
+            onClick={() => guardedAction(() => navigate(`/items/${item.id}/edit`))}
+            disabled={labRequired}
+            title={labRequired ? "Select a laboratory first" : "Edit item"}
+            className={`px-4 py-2 text-sm rounded-lg border ${
+              labRequired
+                ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                : "border-blue-200 text-blue-700 hover:bg-blue-50"
+            }`}
           >
             Edit Item
           </button>
+
           <button
-            onClick={() => setReceiveModal(true)}
-            className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700"
+            onClick={() => guardedAction(() => setReceiveModal(true))}
+            disabled={labRequired}
+            title={labRequired ? "Select a laboratory first" : "Receive stock"}
+            className={`px-4 py-2 text-sm rounded-lg ${
+              labRequired
+                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                : "bg-green-600 text-white hover:bg-green-700"
+            }`}
           >
             ↓ Receive stock
           </button>
+
           <button
-            onClick={() => setIssueModal(true)}
-            className="px-4 py-2 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+            onClick={() => guardedAction(() => setIssueModal(true))}
+            disabled={labRequired}
+            title={labRequired ? "Select a laboratory first" : "Issue stock"}
+            className={`px-4 py-2 text-sm rounded-lg ${
+              labRequired
+                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                : "bg-amber-500 text-white hover:bg-amber-600"
+            }`}
           >
             ↑ Issue stock
           </button>
@@ -344,7 +386,11 @@ export default function ItemDetails() {
             <Field label="Dispensing unit" value={item.dispensing_unit || item.unit_of_measure} />
             <Field
               label="Conversion factor"
-              value={item.conversion_factor ? `1 ${item.unit_of_measure} = ${item.conversion_factor} ${item.dispensing_unit}` : null}
+              value={
+                item.conversion_factor
+                  ? `1 ${item.unit_of_measure} = ${item.conversion_factor} ${item.dispensing_unit}`
+                  : null
+              }
             />
             <Field label="Current stock" value={`${totalStock} ${stockUnit}`} />
             <Field label="Minimum threshold" value={`${item.minimum_threshold ?? 0} ${stockUnit}`} />
@@ -419,7 +465,9 @@ export default function ItemDetails() {
         </div>
 
         {batches.length === 0 ? (
-          <div className="p-10 text-center text-sm text-gray-400">No batches recorded for this item.</div>
+          <div className="p-10 text-center text-sm text-gray-400">
+            No batches recorded for this item.
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -457,8 +505,14 @@ export default function ItemDetails() {
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
                         <button
-                          onClick={() => setEditBatch(batch)}
-                          className="text-xs px-2.5 py-1 border border-blue-100 rounded text-blue-600 hover:bg-blue-50 transition-colors"
+                          onClick={() => guardedAction(() => setEditBatch(batch))}
+                          disabled={labRequired}
+                          title={labRequired ? "Select a laboratory first" : "Edit batch"}
+                          className={`text-xs px-2.5 py-1 rounded border ${
+                            labRequired
+                              ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                              : "border-blue-100 text-blue-600 hover:bg-blue-50 transition-colors"
+                          }`}
                         >
                           Edit
                         </button>
@@ -478,7 +532,9 @@ export default function ItemDetails() {
         </div>
 
         {transactions.length === 0 ? (
-          <div className="p-10 text-center text-sm text-gray-400">No transactions found for this item.</div>
+          <div className="p-10 text-center text-sm text-gray-400">
+            No transactions found for this item.
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

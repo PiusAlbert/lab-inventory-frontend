@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react"
 import { updateBatch } from "../services/batchesApi"
+import { useAuth } from "../context/AuthContext"
 
 export default function EditBatchModal({ batch, item = null, onClose, onSuccess }) {
+  const { isAdmin, requiresLabSelection } = useAuth()
+
   const [quantityReceived, setQuantityReceived] = useState(
     batch?.quantity_received != null ? String(batch.quantity_received) : ""
   )
@@ -12,8 +15,11 @@ export default function EditBatchModal({ batch, item = null, onClose, onSuccess 
     batch?.expiry_date ? String(batch.expiry_date).slice(0, 10) : ""
   )
   const [location, setLocation] = useState(batch?.storage_location || "")
+  const [reason, setReason] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  const labRequired = isAdmin && requiresLabSelection
 
   const unitLabel = useMemo(() => {
     if (item?.dispensing_unit) return item.dispensing_unit
@@ -27,6 +33,11 @@ export default function EditBatchModal({ batch, item = null, onClose, onSuccess 
   const batchNumber = batch?.batch_number || "Unnumbered batch"
 
   const submit = async () => {
+    if (labRequired) {
+      setError("Select a laboratory first before editing this batch")
+      return
+    }
+
     const receivedNum = Number(quantityReceived)
     const currentNum = Number(currentQuantity)
 
@@ -45,6 +56,11 @@ export default function EditBatchModal({ batch, item = null, onClose, onSuccess 
       return
     }
 
+    if (!reason.trim()) {
+      setError("Please provide a reason for this correction")
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -54,6 +70,7 @@ export default function EditBatchModal({ batch, item = null, onClose, onSuccess 
         current_quantity: currentNum,
         expiry_date: expiry || null,
         storage_location: location.trim() || null,
+        reason: reason.trim(),
       })
 
       onSuccess?.()
@@ -66,104 +83,131 @@ export default function EditBatchModal({ batch, item = null, onClose, onSuccess 
   }
 
   return (
-    <div style={overlay}>
-      <div style={modal}>
-        <div style={{ marginBottom: "1.25rem" }}>
-          <h3 style={titleStyle}>Edit Batch Record</h3>
-          <p style={subtleStyle}>
-            {itemName} · {batchNumber}
-          </p>
-        </div>
-
-        <div style={warningBox}>
-          <strong>Correction mode:</strong> Use this only when the recorded batch values
-          are wrong. This updates the stored batch record directly.
-        </div>
-
-        {error && (
-          <div style={errorBox}>
-            {error}
-          </div>
-        )}
-
-        <div style={grid}>
-          <div style={fieldWrap}>
-            <label style={labelStyle}>
-              Amount received <span style={unitStyle}>({unitLabel})</span>
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="any"
-              value={quantityReceived}
-              onChange={(e) => setQuantityReceived(e.target.value)}
-              placeholder={`Enter received amount in ${unitLabel}`}
-              style={inputStyle}
-            />
-            <p style={hintStyle}>
-              Original quantity entered when this batch was received.
+    <div style={overlay} onClick={onClose}>
+      <div style={modal} onClick={(e) => e.stopPropagation()}>
+        <div style={header}>
+          <div>
+            <h3 style={titleStyle}>Edit Batch Record</h3>
+            <p style={subtleStyle}>
+              {itemName} · {batchNumber}
             </p>
           </div>
 
+          <button onClick={onClose} style={closeBtn} aria-label="Close">
+            ×
+          </button>
+        </div>
+
+        <div style={body}>
+          {labRequired && (
+            <div style={warningBox}>
+              Select a laboratory first before editing this batch record.
+            </div>
+          )}
+
+          <div style={noticeBox}>
+            <strong>Correction mode:</strong> Use this only when the stored batch values
+            are incorrect. This change will be audit-logged with your reason.
+          </div>
+
+          {error && <div style={errorBox}>{error}</div>}
+
+          <div style={grid}>
+            <div style={fieldWrap}>
+              <label style={labelStyle}>
+                Amount received <span style={unitStyle}>({unitLabel})</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={quantityReceived}
+                onChange={(e) => setQuantityReceived(e.target.value)}
+                placeholder={`Enter received amount in ${unitLabel}`}
+                style={inputStyle}
+              />
+              <p style={hintStyle}>
+                Original quantity recorded when this batch was received.
+              </p>
+            </div>
+
+            <div style={fieldWrap}>
+              <label style={labelStyle}>
+                Amount available in store <span style={unitStyle}>({unitLabel})</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={currentQuantity}
+                onChange={(e) => setCurrentQuantity(e.target.value)}
+                placeholder={`Enter available amount in ${unitLabel}`}
+                style={inputStyle}
+              />
+              <p style={hintStyle}>
+                Quantity currently remaining for issue or use.
+              </p>
+            </div>
+          </div>
+
           <div style={fieldWrap}>
             <label style={labelStyle}>
-              Amount available in store <span style={unitStyle}>({unitLabel})</span>
+              Expiry date <span style={optionalStyle}>(optional)</span>
             </label>
             <input
-              type="number"
-              min="0"
-              step="any"
-              value={currentQuantity}
-              onChange={(e) => setCurrentQuantity(e.target.value)}
-              placeholder={`Enter available amount in ${unitLabel}`}
+              type="date"
+              value={expiry}
+              onChange={(e) => setExpiry(e.target.value)}
               style={inputStyle}
             />
+          </div>
+
+          <div style={fieldWrap}>
+            <label style={labelStyle}>
+              Storage location <span style={optionalStyle}>(optional)</span>
+            </label>
+            <input
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Shelf A3, Cold Room 1, Cabinet B..."
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={fieldWrap}>
+            <label style={labelStyle}>
+              Reason for correction <span style={{ color: "#dc2626" }}>*</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Explain why this batch record is being corrected..."
+              rows={4}
+              style={textareaStyle}
+            />
             <p style={hintStyle}>
-              Remaining quantity currently available for issue.
+              Example: wrong received quantity entered during stock intake, incorrect expiry
+              date from supplier label, or stock count adjustment after verification.
             </p>
           </div>
-        </div>
 
-        <div style={fieldWrap}>
-          <label style={labelStyle}>
-            Expiry date <span style={optionalStyle}>(optional)</span>
-          </label>
-          <input
-            type="date"
-            value={expiry}
-            onChange={(e) => setExpiry(e.target.value)}
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={fieldWrap}>
-          <label style={labelStyle}>
-            Storage location <span style={optionalStyle}>(optional)</span>
-          </label>
-          <input
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="Shelf A3, Cold Room 1, Cabinet B..."
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={infoBox}>
-          <div style={infoRow}>
-            <span style={infoLabel}>Previous received:</span>
-            <span style={infoValue}>
-              {Number(batch?.quantity_received || 0).toLocaleString()} {unitLabel}
-            </span>
-          </div>
-          <div style={infoRow}>
-            <span style={infoLabel}>Previous available:</span>
-            <span style={infoValue}>
-              {Number(batch?.current_quantity || 0).toLocaleString()} {unitLabel}
-            </span>
+          <div style={infoBox}>
+            <div style={infoRow}>
+              <span style={infoLabel}>Previous received:</span>
+              <span style={infoValue}>
+                {Number(batch?.quantity_received || 0).toLocaleString()} {unitLabel}
+              </span>
+            </div>
+            <div style={infoRow}>
+              <span style={infoLabel}>Previous available:</span>
+              <span style={infoValue}>
+                {Number(batch?.current_quantity || 0).toLocaleString()} {unitLabel}
+              </span>
+            </div>
           </div>
         </div>
 
-        <div style={actionsRow}>
+        <div style={footer}>
           <button
             onClick={onClose}
             disabled={loading}
@@ -179,14 +223,15 @@ export default function EditBatchModal({ batch, item = null, onClose, onSuccess 
 
           <button
             onClick={submit}
-            disabled={loading}
+            disabled={loading || labRequired}
             style={{
               ...buttonBase,
-              background: loading ? "#93c5fd" : "#2563eb",
+              background: loading || labRequired ? "#93c5fd" : "#2563eb",
               border: "1px solid #2563eb",
               color: "#fff",
-              cursor: loading ? "not-allowed" : "pointer",
+              cursor: loading || labRequired ? "not-allowed" : "pointer",
             }}
+            title={labRequired ? "Select a laboratory first" : "Save changes"}
           >
             {loading ? "Saving..." : "Save Changes"}
           </button>
@@ -204,16 +249,58 @@ const overlay = {
   alignItems: "center",
   justifyContent: "center",
   zIndex: 1000,
-  padding: "1rem",
+  padding: "16px",
 }
 
 const modal = {
   width: "100%",
-  maxWidth: "560px",
+  maxWidth: "680px",
+  maxHeight: "calc(100vh - 32px)",
   background: "#fff",
   borderRadius: "14px",
   boxShadow: "0 24px 60px rgba(15, 23, 42, 0.2)",
-  padding: "1.25rem",
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
+}
+
+const header = {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: "12px",
+  padding: "16px 18px",
+  borderBottom: "1px solid #e2e8f0",
+  background: "#fff",
+  flexShrink: 0,
+}
+
+const body = {
+  padding: "16px 18px",
+  overflowY: "auto",
+  minHeight: 0,
+}
+
+const footer = {
+  display: "flex",
+  justifyContent: "flex-end",
+  gap: "10px",
+  padding: "14px 18px",
+  borderTop: "1px solid #e2e8f0",
+  background: "#fff",
+  flexShrink: 0,
+  position: "sticky",
+  bottom: 0,
+}
+
+const closeBtn = {
+  border: "none",
+  background: "transparent",
+  fontSize: "24px",
+  lineHeight: 1,
+  color: "#64748b",
+  cursor: "pointer",
+  padding: "0 4px",
 }
 
 const titleStyle = {
@@ -231,7 +318,7 @@ const subtleStyle = {
 
 const grid = {
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
+  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
   gap: "12px",
 }
 
@@ -275,6 +362,20 @@ const inputStyle = {
   background: "#fff",
 }
 
+const textareaStyle = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: "8px",
+  border: "1px solid #cbd5e1",
+  fontSize: "0.9rem",
+  color: "#0f172a",
+  outline: "none",
+  boxSizing: "border-box",
+  background: "#fff",
+  resize: "vertical",
+  fontFamily: "inherit",
+}
+
 const warningBox = {
   background: "#fff7ed",
   border: "1px solid #fdba74",
@@ -283,6 +384,16 @@ const warningBox = {
   marginBottom: "1rem",
   fontSize: "0.82rem",
   color: "#9a3412",
+}
+
+const noticeBox = {
+  background: "#f8fafc",
+  border: "1px solid #e2e8f0",
+  borderRadius: "8px",
+  padding: "10px 12px",
+  marginBottom: "1rem",
+  fontSize: "0.82rem",
+  color: "#475569",
 }
 
 const errorBox = {
@@ -318,13 +429,6 @@ const infoLabel = {
 const infoValue = {
   color: "#0f172a",
   fontWeight: 600,
-}
-
-const actionsRow = {
-  display: "flex",
-  justifyContent: "flex-end",
-  gap: "10px",
-  marginTop: "1.25rem",
 }
 
 const buttonBase = {

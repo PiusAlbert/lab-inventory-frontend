@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { fetchItems, deleteItem } from "../services/itemsApi"
 import { fetchCategories } from "../services/categoriesApi"
+import { useAuth } from "../context/AuthContext"
 import IssueStockModal from "../components/IssueStockModal"
 import ReceiveStockModal from "../components/ReceiveStockModal"
 
@@ -23,6 +24,7 @@ const HAZARD_BADGE = {
 export default function Items() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const { isAdmin, requiresLabSelection } = useAuth()
 
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
@@ -38,9 +40,12 @@ export default function Items() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
 
+  const labRequired = isAdmin && requiresLabSelection
+
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
+
     try {
       const [itemData, catData] = await Promise.all([
         fetchItems(),
@@ -50,7 +55,7 @@ export default function Items() {
       setItems(Array.isArray(itemData) ? itemData : [])
       setCategories(Array.isArray(catData) ? catData : [])
     } catch (err) {
-      setError(err.message || "Failed to load items")
+      setError(err.response?.data?.error || err.message || "Failed to load items")
       setItems([])
     } finally {
       setLoading(false)
@@ -63,8 +68,21 @@ export default function Items() {
     return () => window.removeEventListener("labChanged", load)
   }, [load])
 
+  useEffect(() => {
+    const defaultFilter = searchParams.get("filter")
+    if (defaultFilter === "low-stock") {
+      setSearch("")
+    }
+  }, [searchParams])
+
+  const guardedAction = (fn) => {
+    if (labRequired) return
+    fn()
+  }
+
   const handleDelete = async () => {
     if (!deleteTarget) return
+
     setDeleting(true)
     try {
       await deleteItem(deleteTarget.id)
@@ -77,17 +95,23 @@ export default function Items() {
     }
   }
 
-  const filtered = items.filter((item) => {
-    const q = search.toLowerCase()
-    const matchSearch =
-      !search ||
-      item.name?.toLowerCase().includes(q) ||
-      item.sku?.toLowerCase().includes(q)
+  const filtered = Array.isArray(items)
+    ? items.filter((item) => {
+        const q = search.toLowerCase()
+        const matchSearch =
+          !search ||
+          item.name?.toLowerCase().includes(q) ||
+          item.sku?.toLowerCase().includes(q)
 
-    const matchCat = !catFilter || item.category_id === catFilter
+        const matchCat = !catFilter || item.category_id === catFilter
 
-    return matchSearch && matchCat
-  })
+        if (searchParams.get("filter") === "low-stock") {
+          return matchSearch && matchCat && Boolean(item.is_low_stock || item.low_stock)
+        }
+
+        return matchSearch && matchCat
+      })
+    : []
 
   if (loading) {
     return (
@@ -114,25 +138,39 @@ export default function Items() {
 
   return (
     <div className="space-y-5">
-      {/* TOP BAR */}
+      {labRequired && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4">
+          <p className="font-medium text-sm mb-1">Select a laboratory first</p>
+          <p className="text-sm">
+            As Super Admin, you can review inventory across labs, but to add items,
+            edit items, receive stock, issue stock, or delete records, you must first
+            choose a laboratory from the top bar.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-gray-800">Items</h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            {filtered.length} items
+            {filtered.length} item{filtered.length !== 1 ? "s" : ""}
           </p>
         </div>
 
         <button
-          onClick={() => navigate("/items/new")}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium
-                     bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          onClick={() => guardedAction(() => navigate("/items/new"))}
+          disabled={labRequired}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            labRequired
+              ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+              : "bg-blue-600 text-white hover:bg-blue-700"
+          }`}
+          title={labRequired ? "Select a laboratory first" : "Add item"}
         >
           ＋ Add item
         </button>
       </div>
 
-      {/* FILTERS */}
       <div className="flex flex-col sm:flex-row gap-2">
         <input
           value={search}
@@ -155,7 +193,6 @@ export default function Items() {
         </select>
       </div>
 
-      {/* TABLE */}
       <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
@@ -164,6 +201,7 @@ export default function Items() {
               <th className="px-4 py-3">SKU</th>
               <th className="px-4 py-3">Type</th>
               <th className="px-4 py-3">Category</th>
+              <th className="px-4 py-3">Hazard</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -174,8 +212,15 @@ export default function Items() {
                 key={item.id}
                 className="border-b border-gray-50 hover:bg-gray-50"
               >
-                <td className="px-4 py-3 font-medium text-gray-800">
-                  {item.name}
+                <td className="px-4 py-3">
+                  <div>
+                    <p className="font-medium text-gray-800">{item.name}</p>
+                    {item.barcode && (
+                      <p className="text-xs text-gray-400 mt-0.5 font-mono">
+                        {item.barcode}
+                      </p>
+                    )}
+                  </div>
                 </td>
 
                 <td className="px-4 py-3 font-mono text-gray-500">
@@ -185,7 +230,7 @@ export default function Items() {
                 <td className="px-4 py-3">
                   <span
                     className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      TYPE_BADGE[item.item_type] || ""
+                      TYPE_BADGE[item.item_type] || "bg-gray-100 text-gray-600"
                     }`}
                   >
                     {item.item_type}
@@ -193,11 +238,27 @@ export default function Items() {
                 </td>
 
                 <td className="px-4 py-3 text-gray-600">
-                  {categories.find((c) => c.id === item.category_id)?.name || "—"}
+                  {categories.find((c) => c.id === item.category_id)?.name ||
+                    item.categories?.name ||
+                    "—"}
                 </td>
 
                 <td className="px-4 py-3">
-                  <div className="flex justify-end gap-2">
+                  {item.hazard_class ? (
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        HAZARD_BADGE[item.hazard_class] || "bg-gray-50 text-gray-500"
+                      }`}
+                    >
+                      {item.hazard_class}
+                    </span>
+                  ) : (
+                    <span className="text-gray-300 text-xs">—</span>
+                  )}
+                </td>
+
+                <td className="px-4 py-3">
+                  <div className="flex justify-end gap-2 flex-wrap">
                     <button
                       onClick={() => navigate(`/items/${item.id}`)}
                       className="text-xs px-2.5 py-1 border border-gray-200 rounded hover:bg-gray-50"
@@ -205,31 +266,54 @@ export default function Items() {
                       View
                     </button>
 
-                    {/* ✅ NEW EDIT BUTTON */}
                     <button
-                      onClick={() => navigate(`/items/${item.id}/edit`)}
-                      className="text-xs px-2.5 py-1 border border-blue-100 rounded text-blue-600 hover:bg-blue-50"
+                      onClick={() => guardedAction(() => navigate(`/items/${item.id}/edit`))}
+                      disabled={labRequired}
+                      title={labRequired ? "Select a laboratory first" : "Edit item"}
+                      className={`text-xs px-2.5 py-1 rounded border ${
+                        labRequired
+                          ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                          : "border-blue-100 text-blue-600 hover:bg-blue-50"
+                      }`}
                     >
                       Edit
                     </button>
 
                     <button
-                      onClick={() => setReceiveModal(item)}
-                      className="text-xs px-2.5 py-1 border border-green-100 rounded text-green-600 hover:bg-green-50"
+                      onClick={() => guardedAction(() => setReceiveModal(item))}
+                      disabled={labRequired}
+                      title={labRequired ? "Select a laboratory first" : "Receive stock"}
+                      className={`text-xs px-2.5 py-1 rounded border ${
+                        labRequired
+                          ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                          : "border-green-100 text-green-600 hover:bg-green-50"
+                      }`}
                     >
                       Receive
                     </button>
 
                     <button
-                      onClick={() => setIssueModal(item)}
-                      className="text-xs px-2.5 py-1 border border-amber-100 rounded text-amber-600 hover:bg-amber-50"
+                      onClick={() => guardedAction(() => setIssueModal(item))}
+                      disabled={labRequired}
+                      title={labRequired ? "Select a laboratory first" : "Issue stock"}
+                      className={`text-xs px-2.5 py-1 rounded border ${
+                        labRequired
+                          ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                          : "border-amber-100 text-amber-600 hover:bg-amber-50"
+                      }`}
                     >
                       Issue
                     </button>
 
                     <button
-                      onClick={() => setDeleteTarget(item)}
-                      className="text-xs px-2.5 py-1 border border-red-100 rounded text-red-600 hover:bg-red-50"
+                      onClick={() => guardedAction(() => setDeleteTarget(item))}
+                      disabled={labRequired}
+                      title={labRequired ? "Select a laboratory first" : "Delete item"}
+                      className={`text-xs px-2.5 py-1 rounded border ${
+                        labRequired
+                          ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                          : "border-red-100 text-red-600 hover:bg-red-50"
+                      }`}
                     >
                       Delete
                     </button>
@@ -237,11 +321,21 @@ export default function Items() {
                 </td>
               </tr>
             ))}
+
+            {filtered.length === 0 && (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-4 py-10 text-center text-sm text-gray-400"
+                >
+                  No items found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* MODALS */}
       {issueModal && (
         <IssueStockModal
           itemId={issueModal.id}
@@ -260,9 +354,8 @@ export default function Items() {
         />
       )}
 
-      {/* DELETE CONFIRM */}
       {deleteTarget && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-[1000]">
           <div className="bg-white rounded-lg p-5 w-full max-w-sm">
             <h3 className="font-semibold text-gray-800 mb-2">
               Delete item

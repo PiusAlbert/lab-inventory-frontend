@@ -109,7 +109,7 @@ export default function Login() {
             marginBottom: "1rem",
             color: "#93c5fd",
           }}>
-            DECOHAS Labs · Inventory System
+            DIST Labs · Inventory System
           </div>
           <h1 style={{ fontSize: "2.2rem", fontWeight: 700, lineHeight: 1.2, margin: "0 0 0.75rem" }}>
             Smart Lab Inventory<br />Management
@@ -268,7 +268,7 @@ export default function Login() {
         </button>
 
         <p style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "2rem", textAlign: "center" }}>
-          © {new Date().getFullYear()} DECOHAS Labs · All rights reserved
+          © {new Date().getFullYear()} DIST Labs · All rights reserved
         </p>
       </div>
 

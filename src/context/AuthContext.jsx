@@ -1,116 +1,215 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
+import { supabase } from "../lib/supabase"
 
-export const AuthContext = createContext();
+export const AuthContext = createContext()
+
+function readStoredLabId() {
+  try {
+    const value = sessionStorage.getItem("x-lab-id")
+    if (!value || value === "null" || value === "undefined") return null
+    return value
+  } catch {
+    return null
+  }
+}
+
+function writeStoredLabId(value) {
+  try {
+    if (!value || value === "null" || value === "undefined" || String(value).trim() === "") {
+      sessionStorage.removeItem("x-lab-id")
+      return
+    }
+    sessionStorage.setItem("x-lab-id", String(value).trim())
+  } catch {}
+}
+
+function withTimeout(promise, ms = 10000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Auth profile request timed out")), ms)
+    ),
+  ])
+}
 
 export function AuthProvider({ children }) {
+  const [session, setSession] = useState(null)
+  const [appUser, setAppUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [selectedLabId, setSelectedLabIdState] = useState(() => readStoredLabId())
 
-  const [session,       setSession]       = useState(null);
-  const [appUser,       setAppUser]       = useState(null);
-  const [loading,       setLoading]       = useState(true);
-  const [selectedLabId, setSelectedLabId] = useState(null);
+  const mountedRef = useRef(true)
+  const bootstrapDoneRef = useRef(false)
+  const requestSeqRef = useRef(0)
+
+  const applySelectedLabForRole = (role) => {
+    if (role === "SUPER_ADMIN") {
+      setSelectedLabIdState(readStoredLabId())
+    } else {
+      setSelectedLabIdState(null)
+      writeStoredLabId(null)
+    }
+  }
+
+  const fetchAppUser = async (userId) => {
+    const requestId = ++requestSeqRef.current
+
+    const query = supabase
+      .from("app_users")
+      .select("id, full_name, role, laboratory_id, is_active")
+      .eq("id", userId)
+      .maybeSingle()
+
+    const { data, error } = await withTimeout(query, 10000)
+
+    if (!mountedRef.current || requestId !== requestSeqRef.current) return null
+
+    if (error) {
+      console.error("app_users fetch error:", error.message, error.code)
+      setAppUser(null)
+      return null
+    }
+
+    if (!data) {
+      console.warn("No app_users row found for:", userId)
+      setAppUser(null)
+      return null
+    }
+
+    setAppUser(data)
+    applySelectedLabForRole(data.role)
+    return data
+  }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const s = data.session;
-      setSession(s);
-      if (s?.user) {
-        fetchAppUser(s.user.id, s.access_token);
-      } else {
-        setLoading(false);
+    mountedRef.current = true
+
+    const bootstrap = async () => {
+      try {
+        const { data } = await supabase.auth.getSession()
+        if (!mountedRef.current) return
+
+        const currentSession = data.session
+        setSession(currentSession)
+
+        if (currentSession?.user) {
+          await fetchAppUser(currentSession.user.id)
+        } else {
+          setAppUser(null)
+        }
+      } catch (err) {
+        console.error("Auth bootstrap failed:", err)
+        if (!mountedRef.current) return
+        setSession(null)
+        setAppUser(null)
+      } finally {
+        if (mountedRef.current) {
+          bootstrapDoneRef.current = true
+          setLoading(false)
+        }
       }
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setSelectedLabId(null);
-      sessionStorage.removeItem("x-lab-id");
-      if (session?.user) {
-        fetchAppUser(session.user.id, session.access_token);
-      } else {
-        setAppUser(null);
-        setLoading(false);
-      }
-    });
-
-    return () => listener.subscription.unsubscribe();
-  }, []);
-
-  /**
-   * Fetch the app_users record using the authenticated user's own token.
-   * Uses maybeSingle() — returns null instead of throwing 406 if no row found.
-   *
-   * If this returns null, RLS is likely blocking the query.
-   * Fix: run in Supabase SQL editor:
-   *   CREATE POLICY "Users can read own profile"
-   *   ON public.app_users FOR SELECT TO authenticated
-   *   USING (auth.uid() = id);
-   */
-  const fetchAppUser = async (userId, accessToken) => {
-    try {
-      // Use a fresh client with the user's own token to respect RLS
-      const { data, error } = await supabase
-        .from("app_users")
-        .select("id, full_name, role, laboratory_id, is_active")
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error("app_users fetch error:", error.message, error.code);
-        // If 406 / PGRST116 — RLS is blocking. User can't read their own row.
-        // Run the policy SQL above in Supabase to fix.
-        setAppUser(null);
-        return;
-      }
-
-      if (!data) {
-        console.warn("No app_users row found for", userId,
-          "— make sure this user has a record in the app_users table");
-        setAppUser(null);
-        return;
-      }
-
-      setAppUser(data);
-    } catch (err) {
-      console.error("fetchAppUser exception:", err);
-      setAppUser(null);
-    } finally {
-      setLoading(false);
     }
-  };
 
-  const role    = appUser?.role         ?? null;
-  const labId   = appUser?.laboratory_id ?? null;
-  const isAdmin = role === "SUPER_ADMIN";
+    bootstrap()
 
-  const effectiveLabId = isAdmin ? selectedLabId : labId;
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
+      if (!mountedRef.current) return
 
-  const handleSetSelectedLab = (id) => {
-    setSelectedLabId(id);
-    if (id) {
-      sessionStorage.setItem("x-lab-id", id);
-    } else {
-      sessionStorage.removeItem("x-lab-id");
+      setSession(nextSession)
+
+      try {
+        if (!nextSession?.user) {
+          requestSeqRef.current += 1
+          setAppUser(null)
+          setSelectedLabIdState(null)
+          writeStoredLabId(null)
+          if (bootstrapDoneRef.current) {
+            setLoading(false)
+          }
+          return
+        }
+
+        /**
+         * Important:
+         * Do NOT push the whole app back into loading=true for routine auth events
+         * like token refresh or tab refocus. That is what makes the UI feel like a reload.
+         *
+         * Only the initial bootstrap owns the global loading screen.
+         */
+        await fetchAppUser(nextSession.user.id)
+      } catch (err) {
+        console.error("onAuthStateChange failed:", err)
+        if (!mountedRef.current) return
+        setAppUser(null)
+      } finally {
+        if (bootstrapDoneRef.current) {
+          setLoading(false)
+        }
+      }
+    })
+
+    return () => {
+      mountedRef.current = false
+      listener.subscription.unsubscribe()
     }
-  };
+  }, [])
 
-  return (
-    <AuthContext.Provider value={{
+  const role = appUser?.role ?? null
+  const fullName = appUser?.full_name ?? null
+  const profileLabId = appUser?.laboratory_id ?? null
+  const isAdmin = role === "SUPER_ADMIN"
+
+  const effectiveLabId = isAdmin ? selectedLabId : profileLabId
+  const requiresLabSelection = isAdmin && !selectedLabId
+
+  const setSelectedLabId = (id) => {
+    const normalized =
+      id && id !== "null" && id !== "undefined" && String(id).trim() !== ""
+        ? String(id).trim()
+        : null
+
+    setSelectedLabIdState(normalized)
+    writeStoredLabId(normalized)
+  }
+
+  const clearSelectedLab = () => {
+    setSelectedLabIdState(null)
+    writeStoredLabId(null)
+  }
+
+  const value = useMemo(
+    () => ({
       session,
       appUser,
       loading,
       role,
+      fullName,
       isAdmin,
-      labId,
+      labId: profileLabId,
+      profileLabId,
       selectedLabId,
-      setSelectedLabId: handleSetSelectedLab,
+      setSelectedLabId,
+      clearSelectedLab,
       effectiveLabId,
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+      requiresLabSelection,
+    }),
+    [
+      session,
+      appUser,
+      loading,
+      role,
+      fullName,
+      isAdmin,
+      profileLabId,
+      selectedLabId,
+      effectiveLabId,
+      requiresLabSelection,
+    ]
+  )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  return useContext(AuthContext)
 }

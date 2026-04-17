@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { useSearchParams } from "react-router-dom"
 import { fetchBatches } from "../services/batchesApi"
+import { useAuth } from "../context/AuthContext"
 import ReceiveStockModal from "../components/ReceiveStockModal"
 import EditBatchModal from "../components/EditBatchModal"
 
@@ -43,9 +44,11 @@ function ExpiryBadge({ dateStr }) {
 
 function QtyCell({ value, unit, tone = "default" }) {
   const color =
-    tone === "danger" ? "text-red-600" :
-    tone === "warning" ? "text-amber-600" :
-    "text-gray-800"
+    tone === "danger"
+      ? "text-red-600"
+      : tone === "warning"
+        ? "text-amber-600"
+        : "text-gray-800"
 
   return (
     <div>
@@ -59,6 +62,7 @@ function QtyCell({ value, unit, tone = "default" }) {
 
 export default function StockBatches() {
   const [searchParams] = useSearchParams()
+  const { isAdmin, requiresLabSelection } = useAuth()
 
   const [batches, setBatches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -69,6 +73,13 @@ export default function StockBatches() {
 
   const [receiveModal, setReceiveModal] = useState(null)
   const [editBatch, setEditBatch] = useState(null)
+
+  const labRequired = isAdmin && requiresLabSelection
+
+  const guardedAction = (fn) => {
+    if (labRequired) return
+    fn()
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -100,20 +111,41 @@ export default function StockBatches() {
       b.batch_number?.toLowerCase().includes(q) ||
       b.storage_location?.toLowerCase().includes(q)
 
-    const matchExpiring =
-      !expiring || (daysUntil(b.expiry_date) !== null && daysUntil(b.expiry_date) <= 30)
+    const batchDays = daysUntil(b.expiry_date)
+    const matchExpiring = !expiring || (batchDays !== null && batchDays <= 30)
 
     return matchSearch && matchExpiring
   })
 
   const totalBatchCount = filtered.length
   const uniqueItemCount = new Set(filtered.map((b) => b.item_id).filter(Boolean)).size
-  const activeBatchCount = filtered.filter((b) => Number(b.current_quantity || 0) > 0).length
-  const totalReceived = filtered.reduce((sum, b) => sum + Number(b.quantity_received || 0), 0)
-  const totalAvailable = filtered.reduce((sum, b) => sum + Number(b.current_quantity || 0), 0)
+  const activeBatchCount = filtered.filter(
+    (b) => Number(b.current_quantity || 0) > 0
+  ).length
+
+  const totalReceived = filtered.reduce(
+    (sum, b) => sum + Number(b.quantity_received || 0),
+    0
+  )
+
+  const totalAvailable = filtered.reduce(
+    (sum, b) => sum + Number(b.current_quantity || 0),
+    0
+  )
 
   return (
     <div className="space-y-5">
+      {labRequired && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4">
+          <p className="font-medium text-sm mb-1">Select a laboratory first</p>
+          <p className="text-sm">
+            As Super Admin, you can review stock batches across laboratories, but to
+            receive more stock or edit batch records, you must first choose a laboratory
+            from the top bar.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-gray-800">Stock Batches</h2>
@@ -144,13 +176,17 @@ export default function StockBatches() {
 
         <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4">
           <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Total received</p>
-          <p className="text-2xl font-bold text-blue-700">{Number(totalReceived).toLocaleString()}</p>
+          <p className="text-2xl font-bold text-blue-700">
+            {Number(totalReceived).toLocaleString()}
+          </p>
           <p className="text-xs text-gray-400 mt-1">Sum of recorded received quantities</p>
         </div>
 
         <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4">
           <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Total available</p>
-          <p className="text-2xl font-bold text-green-700">{Number(totalAvailable).toLocaleString()}</p>
+          <p className="text-2xl font-bold text-green-700">
+            {Number(totalAvailable).toLocaleString()}
+          </p>
           <p className="text-xs text-gray-400 mt-1">Sum of remaining quantities in store</p>
         </div>
       </div>
@@ -213,15 +249,19 @@ export default function StockBatches() {
 
                   const available = Number(b.current_quantity || 0)
                   const tone =
-                    available === 0 ? "danger" :
-                    available < 5 ? "warning" :
-                    "default"
+                    available === 0
+                      ? "danger"
+                      : available < 5
+                        ? "warning"
+                        : "default"
 
                   return (
                     <tr key={b.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-800">{b.items?.name ?? "—"}</p>
-                        <p className="text-xs text-gray-400 font-mono mt-0.5">{b.items?.sku ?? ""}</p>
+                        <p className="text-xs text-gray-400 font-mono mt-0.5">
+                          {b.items?.sku ?? ""}
+                        </p>
                       </td>
 
                       <td className="px-4 py-3 font-mono text-xs text-gray-500">
@@ -230,12 +270,16 @@ export default function StockBatches() {
 
                       <td className="px-4 py-3">
                         <QtyCell value={b.quantity_received} unit={baseUnit} />
-                        <p className="text-[11px] text-gray-400 mt-0.5">Amount originally received</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          Amount originally received
+                        </p>
                       </td>
 
                       <td className="px-4 py-3">
                         <QtyCell value={b.current_quantity} unit={baseUnit} tone={tone} />
-                        <p className="text-[11px] text-gray-400 mt-0.5">Amount currently in store</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          Amount currently in store
+                        </p>
                       </td>
 
                       <td className="px-4 py-3">
@@ -249,22 +293,34 @@ export default function StockBatches() {
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => setEditBatch(b)}
-                            className="text-xs px-2.5 py-1 border border-blue-100 rounded
-                                       text-blue-600 hover:bg-blue-50 transition-colors"
+                            onClick={() => guardedAction(() => setEditBatch(b))}
+                            disabled={labRequired}
+                            title={labRequired ? "Select a laboratory first" : "Edit batch"}
+                            className={`text-xs px-2.5 py-1 rounded border ${
+                              labRequired
+                                ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                                : "border-blue-100 text-blue-600 hover:bg-blue-50 transition-colors"
+                            }`}
                           >
                             Edit
                           </button>
 
                           <button
                             onClick={() =>
-                              setReceiveModal({
-                                itemId: b.items?.id ?? null,
-                                itemName: b.items?.name ?? null,
-                              })
+                              guardedAction(() =>
+                                setReceiveModal({
+                                  itemId: b.items?.id ?? null,
+                                  itemName: b.items?.name ?? null,
+                                })
+                              )
                             }
-                            className="text-xs px-2.5 py-1 border border-green-100 rounded
-                                       text-green-700 hover:bg-green-50 transition-colors"
+                            disabled={labRequired}
+                            title={labRequired ? "Select a laboratory first" : "Receive more stock"}
+                            className={`text-xs px-2.5 py-1 rounded border ${
+                              labRequired
+                                ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                                : "border-green-100 text-green-700 hover:bg-green-50 transition-colors"
+                            }`}
                           >
                             Receive more
                           </button>

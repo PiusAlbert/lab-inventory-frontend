@@ -2,17 +2,34 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { fetchCategories } from "../services/categoriesApi"
 import { fetchItemById, updateItem } from "../services/itemsApi"
+import { useAuth } from "../context/AuthContext"
 
 const ITEM_TYPES = ["EQUIPMENT", "CHEMICAL", "CONSUMABLE", "CRM"]
 
 const HAZARD_CLASSES = [
-  "Non-Hazardous", "Flammable", "Corrosive",
-  "Oxidizer", "Toxic", "Explosive", "Other",
+  "Non-Hazardous",
+  "Flammable",
+  "Corrosive",
+  "Oxidizer",
+  "Toxic",
+  "Explosive",
+  "Other",
 ]
 
 const UNITS = [
-  "pcs", "g", "kg", "mg", "L", "mL", "box",
-  "roll", "bag", "bottle", "jar", "pack", "set",
+  "pcs",
+  "g",
+  "kg",
+  "mg",
+  "L",
+  "mL",
+  "box",
+  "roll",
+  "bag",
+  "bottle",
+  "jar",
+  "pack",
+  "set",
 ]
 
 const EMPTY_FORM = {
@@ -68,7 +85,15 @@ function Field({ label, required, children, hint, error }) {
   )
 }
 
-function Input({ value, onChange, type = "text", placeholder, disabled = false, min, step }) {
+function Input({
+  value,
+  onChange,
+  type = "text",
+  placeholder,
+  disabled = false,
+  min,
+  step,
+}) {
   return (
     <input
       type={type}
@@ -97,9 +122,15 @@ function Select({ value, onChange, options, placeholder, disabled = false }) {
     >
       {placeholder && <option value="">{placeholder}</option>}
       {options.map((o) =>
-        typeof o === "string"
-          ? <option key={o} value={o}>{o}</option>
-          : <option key={o.value} value={o.value}>{o.label}</option>
+        typeof o === "string" ? (
+          <option key={o} value={o}>
+            {o}
+          </option>
+        ) : (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        )
       )}
     </select>
   )
@@ -117,6 +148,7 @@ function toFormValue(v) {
 export default function EditItem() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { isAdmin, requiresLabSelection } = useAuth()
 
   const [form, setForm] = useState(EMPTY_FORM)
   const [ext, setExt] = useState(EMPTY_EXT)
@@ -126,6 +158,8 @@ export default function EditItem() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [fieldErrors, setFieldErrors] = useState({})
+
+  const labRequired = isAdmin && requiresLabSelection
 
   useEffect(() => {
     let active = true
@@ -203,6 +237,7 @@ export default function EditItem() {
     }
 
     load()
+
     return () => {
       active = false
     }
@@ -329,6 +364,11 @@ export default function EditItem() {
   }
 
   const submit = async () => {
+    if (labRequired) {
+      setError("Select a laboratory first before editing this item")
+      return
+    }
+
     const errs = validate()
     setFieldErrors(errs)
 
@@ -377,6 +417,16 @@ export default function EditItem() {
 
   return (
     <div className="space-y-6">
+      {labRequired && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4">
+          <p className="font-medium text-sm mb-1">Select a laboratory first</p>
+          <p className="text-sm">
+            As Super Admin, you can only edit this item after choosing the target
+            laboratory from the top bar.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-gray-800">Edit Item</h2>
@@ -384,6 +434,7 @@ export default function EditItem() {
             Update inventory metadata and item-specific details
           </p>
         </div>
+
         <div className="flex gap-2">
           <button
             onClick={() => navigate(`/items/${id}`)}
@@ -393,15 +444,20 @@ export default function EditItem() {
           </button>
           <button
             onClick={submit}
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300"
+            disabled={saving || labRequired}
+            className={`px-4 py-2 text-sm font-medium rounded-lg ${
+              saving || labRequired
+                ? "bg-blue-300 text-white cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
+            title={labRequired ? "Select a laboratory first" : "Save changes"}
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>
 
-      {error && (
+      {error && !(error && !saving && !form.name && !form.sku) && (
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">
           {error}
         </div>
@@ -567,7 +623,9 @@ export default function EditItem() {
                   checked={form.is_perishable}
                   onChange={set("is_perishable")}
                 />
-                <span className="text-sm text-gray-700">This item can expire or degrade over time</span>
+                <span className="text-sm text-gray-700">
+                  This item can expire or degrade over time
+                </span>
               </label>
             </Field>
 
@@ -639,7 +697,11 @@ export default function EditItem() {
               </Field>
 
               <Field label="GHS classification">
-                <Input value={ext.ghp_classification} onChange={setE("ghp_classification")} placeholder="e.g. Skin Corr. 1B" />
+                <Input
+                  value={ext.ghp_classification}
+                  onChange={setE("ghp_classification")}
+                  placeholder="e.g. Skin Corr. 1B"
+                />
               </Field>
             </div>
           </div>
