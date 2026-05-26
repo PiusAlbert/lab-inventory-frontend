@@ -173,7 +173,8 @@ function ExpiryPill({ date }) {
 export default function ItemDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { isAdmin, requiresLabSelection } = useAuth()
+  const { isAdmin, requiresLabSelection, role } = useAuth()
+  const isStudent = role === 'STUDENT'
 
   const [item, setItem] = useState(null)
   const [batches, setBatches] = useState([])
@@ -334,46 +335,48 @@ export default function ItemDetails() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => guardedAction(() => navigate(`/items/${item.id}/edit`))}
-            disabled={labRequired}
-            title={labRequired ? "Select a laboratory first" : "Edit item"}
-            className={`px-4 py-2 text-sm rounded-lg border ${
-              labRequired
-                ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                : "border-blue-200 text-blue-700 hover:bg-blue-50"
-            }`}
-          >
-            Edit Item
-          </button>
+        {!isStudent && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => guardedAction(() => navigate(`/items/${item.id}/edit`))}
+              disabled={labRequired}
+              title={labRequired ? "Select a laboratory first" : "Edit item"}
+              className={`px-4 py-2 text-sm rounded-lg border ${
+                labRequired
+                  ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                  : "border-blue-200 text-blue-700 hover:bg-blue-50"
+              }`}
+            >
+              Edit Item
+            </button>
 
-          <button
-            onClick={() => guardedAction(() => setReceiveModal(true))}
-            disabled={labRequired}
-            title={labRequired ? "Select a laboratory first" : "Receive stock"}
-            className={`px-4 py-2 text-sm rounded-lg ${
-              labRequired
-                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                : "bg-green-600 text-white hover:bg-green-700"
-            }`}
-          >
-            ↓ Receive stock
-          </button>
+            <button
+              onClick={() => guardedAction(() => setReceiveModal(true))}
+              disabled={labRequired}
+              title={labRequired ? "Select a laboratory first" : "Receive stock"}
+              className={`px-4 py-2 text-sm rounded-lg ${
+                labRequired
+                  ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                  : "bg-green-600 text-white hover:bg-green-700"
+              }`}
+            >
+              ↓ Receive stock
+            </button>
 
-          <button
-            onClick={() => guardedAction(() => setIssueModal(true))}
-            disabled={labRequired}
-            title={labRequired ? "Select a laboratory first" : "Issue stock"}
-            className={`px-4 py-2 text-sm rounded-lg ${
-              labRequired
-                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                : "bg-amber-500 text-white hover:bg-amber-600"
-            }`}
-          >
-            ↑ Issue stock
-          </button>
-        </div>
+            <button
+              onClick={() => guardedAction(() => setIssueModal(true))}
+              disabled={labRequired}
+              title={labRequired ? "Select a laboratory first" : "Issue stock"}
+              className={`px-4 py-2 text-sm rounded-lg ${
+                labRequired
+                  ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                  : "bg-amber-500 text-white hover:bg-amber-600"
+              }`}
+            >
+              ↑ Issue stock
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -503,20 +506,22 @@ export default function ItemDetails() {
                       {batch.storage_location || <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => guardedAction(() => setEditBatch(batch))}
-                          disabled={labRequired}
-                          title={labRequired ? "Select a laboratory first" : "Edit batch"}
-                          className={`text-xs px-2.5 py-1 rounded border ${
-                            labRequired
-                              ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                              : "border-blue-100 text-blue-600 hover:bg-blue-50 transition-colors"
-                          }`}
-                        >
-                          Edit
-                        </button>
-                      </div>
+                      {!isStudent && (
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => guardedAction(() => setEditBatch(batch))}
+                            disabled={labRequired}
+                            title={labRequired ? "Select a laboratory first" : "Edit batch"}
+                            className={`text-xs px-2.5 py-1 rounded border ${
+                              labRequired
+                                ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                                : "border-blue-100 text-blue-600 hover:bg-blue-50 transition-colors"
+                            }`}
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

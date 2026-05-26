@@ -24,7 +24,8 @@ const HAZARD_BADGE = {
 export default function Items() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { isAdmin, requiresLabSelection } = useAuth()
+  const { isAdmin, requiresLabSelection, role } = useAuth()
+  const isStudent = role === 'STUDENT'
 
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
@@ -157,18 +158,20 @@ export default function Items() {
           </p>
         </div>
 
-        <button
-          onClick={() => guardedAction(() => navigate("/items/new"))}
-          disabled={labRequired}
-          className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-            labRequired
-              ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700"
-          }`}
-          title={labRequired ? "Select a laboratory first" : "Add item"}
-        >
-          ＋ Add item
-        </button>
+        {!isStudent && (
+          <button
+            onClick={() => guardedAction(() => navigate("/items/new"))}
+            disabled={labRequired}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              labRequired
+                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
+            title={labRequired ? "Select a laboratory first" : "Add item"}
+          >
+            ＋ Add item
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2">
@@ -266,57 +269,61 @@ export default function Items() {
                       View
                     </button>
 
-                    <button
-                      onClick={() => guardedAction(() => navigate(`/items/${item.id}/edit`))}
-                      disabled={labRequired}
-                      title={labRequired ? "Select a laboratory first" : "Edit item"}
-                      className={`text-xs px-2.5 py-1 rounded border ${
-                        labRequired
-                          ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                          : "border-blue-100 text-blue-600 hover:bg-blue-50"
-                      }`}
-                    >
-                      Edit
-                    </button>
+                    {!isStudent && (
+                      <>
+                        <button
+                          onClick={() => guardedAction(() => navigate(`/items/${item.id}/edit`))}
+                          disabled={labRequired}
+                          title={labRequired ? "Select a laboratory first" : "Edit item"}
+                          className={`text-xs px-2.5 py-1 rounded border ${
+                            labRequired
+                              ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                              : "border-blue-100 text-blue-600 hover:bg-blue-50"
+                          }`}
+                        >
+                          Edit
+                        </button>
 
-                    <button
-                      onClick={() => guardedAction(() => setReceiveModal(item))}
-                      disabled={labRequired}
-                      title={labRequired ? "Select a laboratory first" : "Receive stock"}
-                      className={`text-xs px-2.5 py-1 rounded border ${
-                        labRequired
-                          ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                          : "border-green-100 text-green-600 hover:bg-green-50"
-                      }`}
-                    >
-                      Receive
-                    </button>
+                        <button
+                          onClick={() => guardedAction(() => setReceiveModal(item))}
+                          disabled={labRequired}
+                          title={labRequired ? "Select a laboratory first" : "Receive stock"}
+                          className={`text-xs px-2.5 py-1 rounded border ${
+                            labRequired
+                              ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                              : "border-green-100 text-green-600 hover:bg-green-50"
+                          }`}
+                        >
+                          Receive
+                        </button>
 
-                    <button
-                      onClick={() => guardedAction(() => setIssueModal(item))}
-                      disabled={labRequired}
-                      title={labRequired ? "Select a laboratory first" : "Issue stock"}
-                      className={`text-xs px-2.5 py-1 rounded border ${
-                        labRequired
-                          ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                          : "border-amber-100 text-amber-600 hover:bg-amber-50"
-                      }`}
-                    >
-                      Issue
-                    </button>
+                        <button
+                          onClick={() => guardedAction(() => setIssueModal(item))}
+                          disabled={labRequired}
+                          title={labRequired ? "Select a laboratory first" : "Issue stock"}
+                          className={`text-xs px-2.5 py-1 rounded border ${
+                            labRequired
+                              ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                              : "border-amber-100 text-amber-600 hover:bg-amber-50"
+                          }`}
+                        >
+                          Issue
+                        </button>
 
-                    <button
-                      onClick={() => guardedAction(() => setDeleteTarget(item))}
-                      disabled={labRequired}
-                      title={labRequired ? "Select a laboratory first" : "Delete item"}
-                      className={`text-xs px-2.5 py-1 rounded border ${
-                        labRequired
-                          ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                          : "border-red-100 text-red-600 hover:bg-red-50"
-                      }`}
-                    >
-                      Delete
-                    </button>
+                        <button
+                          onClick={() => guardedAction(() => setDeleteTarget(item))}
+                          disabled={labRequired}
+                          title={labRequired ? "Select a laboratory first" : "Delete item"}
+                          className={`text-xs px-2.5 py-1 rounded border ${
+                            labRequired
+                              ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                              : "border-red-100 text-red-600 hover:bg-red-50"
+                          }`}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

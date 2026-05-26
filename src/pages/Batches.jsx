@@ -62,7 +62,8 @@ function QtyCell({ value, unit, tone = "default" }) {
 
 export default function StockBatches() {
   const [searchParams] = useSearchParams()
-  const { isAdmin, requiresLabSelection } = useAuth()
+  const { isAdmin, requiresLabSelection, role } = useAuth()
+  const isStudent = role === 'STUDENT'
 
   const [batches, setBatches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -291,40 +292,42 @@ export default function StockBatches() {
                       </td>
 
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => guardedAction(() => setEditBatch(b))}
-                            disabled={labRequired}
-                            title={labRequired ? "Select a laboratory first" : "Edit batch"}
-                            className={`text-xs px-2.5 py-1 rounded border ${
-                              labRequired
-                                ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                                : "border-blue-100 text-blue-600 hover:bg-blue-50 transition-colors"
-                            }`}
-                          >
-                            Edit
-                          </button>
+                        {!isStudent && (
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => guardedAction(() => setEditBatch(b))}
+                              disabled={labRequired}
+                              title={labRequired ? "Select a laboratory first" : "Edit batch"}
+                              className={`text-xs px-2.5 py-1 rounded border ${
+                                labRequired
+                                  ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                                  : "border-blue-100 text-blue-600 hover:bg-blue-50 transition-colors"
+                              }`}
+                            >
+                              Edit
+                            </button>
 
-                          <button
-                            onClick={() =>
-                              guardedAction(() =>
-                                setReceiveModal({
-                                  itemId: b.items?.id ?? null,
-                                  itemName: b.items?.name ?? null,
-                                })
-                              )
-                            }
-                            disabled={labRequired}
-                            title={labRequired ? "Select a laboratory first" : "Receive more stock"}
-                            className={`text-xs px-2.5 py-1 rounded border ${
-                              labRequired
-                                ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                                : "border-green-100 text-green-700 hover:bg-green-50 transition-colors"
-                            }`}
-                          >
-                            Receive more
-                          </button>
-                        </div>
+                            <button
+                              onClick={() =>
+                                guardedAction(() =>
+                                  setReceiveModal({
+                                    itemId: b.items?.id ?? null,
+                                    itemName: b.items?.name ?? null,
+                                  })
+                                )
+                              }
+                              disabled={labRequired}
+                              title={labRequired ? "Select a laboratory first" : "Receive more stock"}
+                              className={`text-xs px-2.5 py-1 rounded border ${
+                                labRequired
+                                  ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                                  : "border-green-100 text-green-700 hover:bg-green-50 transition-colors"
+                              }`}
+                            >
+                              Receive more
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   )

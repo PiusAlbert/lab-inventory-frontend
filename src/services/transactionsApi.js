@@ -1,7 +1,7 @@
 import api from '../lib/api'
 
-export const fetchTransactions = () =>
-  api.get('/transactions').then(r => r.data)
+export const fetchTransactions = (params = {}) =>
+  api.get('/transactions', { params }).then(r => r.data?.data ?? r.data)
 
 export const issueStock = (body) =>
   api.post('/transactions/issue', body).then(r => r.data)

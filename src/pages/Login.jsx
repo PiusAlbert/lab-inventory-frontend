@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 
-/**
- * Place all images in src/assets/:
- *   logo.jpg
- *   lab-beaker.jpg
- *   lab-bw-glass.jpg
- *   lab-colorful.jpg
- *   lab-glassware.jpg
- *   lab-microscope.jpg
- *   lab-researcher.jpg
- */
-import logoImg  from "../assets/logo.jpg"
+async function getRoleForUser(userId) {
+  try {
+    const { data } = await supabase
+      .from("app_users")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle()
+    return data?.role ?? null
+  } catch {
+    return null
+  }
+}
+
+import logoImg from "../assets/logo.jpg"
 import bg1 from "../assets/lab-beaker.jpg"
 import bg2 from "../assets/lab-bw-glass.jpg"
 import bg3 from "../assets/lab-colorful.jpg"
@@ -31,8 +34,28 @@ const SLIDE_CAPTIONS = [
   "Laboratory safety and compliance",
 ]
 
+// Inline mobile detection — avoids importing a hook into a public page
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  )
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)")
+    const handler = (e) => setIsMobile(e.matches)
+    if (mq.addEventListener) {
+      mq.addEventListener("change", handler)
+      return () => mq.removeEventListener("change", handler)
+    } else {
+      mq.addListener(handler)
+      return () => mq.removeListener(handler)
+    }
+  }, [])
+  return isMobile
+}
+
 export default function Login() {
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
+  const isMobile  = useIsMobile()
 
   const [email,    setEmail]    = useState("")
   const [password, setPassword] = useState("")
@@ -46,7 +69,7 @@ export default function Login() {
     const timer = setInterval(() => {
       setFading(true)
       setTimeout(() => {
-        setSlide(s => (s + 1) % SLIDES.length)
+        setSlide((s) => (s + 1) % SLIDES.length)
         setFading(false)
       }, 600)
     }, 5000)
@@ -54,117 +77,185 @@ export default function Login() {
   }, [])
 
   const login = async () => {
-    if (!email || !password) { setError("Please enter your email and password"); return }
+    if (!email || !password) {
+      setError("Please enter your email and password")
+      return
+    }
     setError(null)
     setLoading(true)
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
-    if (authError) { setError(authError.message); setLoading(false) }
-    else navigate("/dashboard")
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password })
+    if (authError) {
+      setError(authError.message)
+      setLoading(false)
+    } else {
+      const userRole = await getRoleForUser(authData.user?.id)
+      navigate(userRole === "STUDENT" ? "/student-dashboard" : "/dashboard")
+    }
   }
 
-  const onKey = e => { if (e.key === "Enter") login() }
+  const onKey = (e) => {
+    if (e.key === "Enter") login()
+  }
+
+  // ── Shared input style ──────────────────────────────────────────────────
+  const inputStyle = {
+    width: "100%",
+    border: "1.5px solid #e5e7eb",
+    borderRadius: "8px",
+    padding: "11px 14px",
+    fontSize: "0.88rem",
+    color: "#111827",
+    outline: "none",
+    // Critical: prevents inputs from overflowing their container on mobile
+    boxSizing: "border-box",
+    background: loading ? "#f9fafb" : "#fff",
+    // Minimum touch-friendly height
+    minHeight: "44px",
+  }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
-
-      {/* ── LEFT PANEL: Photo Slideshow ──────────── */}
-      <div style={{
-        flex: "1 1 55%",
-        position: "relative",
-        overflow: "hidden",
+    <div
+      style={{
         display: "flex",
-        alignItems: "flex-end",
-      }}>
-        <img
-          src={SLIDES[slide]}
-          alt=""
+        minHeight: "100dvh",
+        fontFamily: "'Segoe UI', system-ui, sans-serif",
+      }}
+    >
+      {/* ── LEFT: Photo slideshow — hidden on mobile ── */}
+      {!isMobile && (
+        <div
           style={{
-            position: "absolute", inset: 0,
-            width: "100%", height: "100%",
-            objectFit: "cover", objectPosition: "center",
-            transition: "opacity 0.6s ease",
-            opacity: fading ? 0 : 1,
+            flex: "1 1 55%",
+            position: "relative",
+            overflow: "hidden",
+            display: "flex",
+            alignItems: "flex-end",
           }}
-        />
+        >
+          <img
+            src={SLIDES[slide]}
+            alt=""
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+              transition: "opacity 0.6s ease",
+              opacity: fading ? 0 : 1,
+            }}
+          />
 
-        {/* Dark gradient overlay */}
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(to top, rgba(10,20,50,0.85) 0%, rgba(10,20,50,0.3) 60%, transparent 100%)",
-        }} />
+          {/* Gradient overlay */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(to top, rgba(10,20,50,0.85) 0%, rgba(10,20,50,0.3) 60%, transparent 100%)",
+            }}
+          />
 
-        {/* Brand + caption */}
-        <div style={{ position: "relative", padding: "2.5rem", color: "#fff", maxWidth: "520px" }}>
-          <div style={{
-            display: "inline-block",
-            background: "rgba(255,255,255,0.12)",
-            backdropFilter: "blur(6px)",
-            border: "1px solid rgba(255,255,255,0.2)",
-            borderRadius: "8px",
-            padding: "6px 14px",
-            fontSize: "11px",
-            fontWeight: 600,
-            letterSpacing: "2px",
-            textTransform: "uppercase",
-            marginBottom: "1rem",
-            color: "#93c5fd",
-          }}>
-            DIST Labs · Inventory System
-          </div>
-          <h1 style={{ fontSize: "2.2rem", fontWeight: 700, lineHeight: 1.2, margin: "0 0 0.75rem" }}>
-            Smart Lab Inventory<br />Management
-          </h1>
-          <p style={{ fontSize: "0.95rem", opacity: 0.8, margin: "0 0 1.5rem", lineHeight: 1.6 }}>
-            {SLIDE_CAPTIONS[slide]}
-          </p>
+          {/* Caption */}
+          <div
+            style={{
+              position: "relative",
+              padding: "2.5rem",
+              color: "#fff",
+              maxWidth: "520px",
+            }}
+          >
+            <div
+              style={{
+                display: "inline-block",
+                background: "rgba(255,255,255,0.12)",
+                backdropFilter: "blur(6px)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: "8px",
+                padding: "6px 14px",
+                fontSize: "11px",
+                fontWeight: 600,
+                letterSpacing: "2px",
+                textTransform: "uppercase",
+                marginBottom: "1rem",
+                color: "#93c5fd",
+              }}
+            >
+              DIST Labs · Inventory System
+            </div>
+            <h1
+              style={{
+                fontSize: "2.2rem",
+                fontWeight: 700,
+                lineHeight: 1.2,
+                margin: "0 0 0.75rem",
+              }}
+            >
+              Smart Lab Inventory
+              <br />
+              Management
+            </h1>
+            <p style={{ fontSize: "0.95rem", opacity: 0.8, margin: "0 0 1.5rem", lineHeight: 1.6 }}>
+              {SLIDE_CAPTIONS[slide]}
+            </p>
 
-          {/* Slide indicator dots */}
-          <div style={{ display: "flex", gap: "6px" }}>
-            {SLIDES.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => {
-                  setFading(true)
-                  setTimeout(() => { setSlide(i); setFading(false) }, 300)
-                }}
-                style={{
-                  width: i === slide ? "24px" : "8px",
-                  height: "8px",
-                  borderRadius: "4px",
-                  border: "none",
-                  background: i === slide ? "#60a5fa" : "rgba(255,255,255,0.35)",
-                  cursor: "pointer",
-                  transition: "all 0.3s",
-                  padding: 0,
-                }}
-              />
-            ))}
+            {/* Slide dots */}
+            <div style={{ display: "flex", gap: "6px" }}>
+              {SLIDES.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setFading(true)
+                    setTimeout(() => {
+                      setSlide(i)
+                      setFading(false)
+                    }, 300)
+                  }}
+                  style={{
+                    width: i === slide ? "24px" : "8px",
+                    height: "8px",
+                    borderRadius: "4px",
+                    border: "none",
+                    background: i === slide ? "#60a5fa" : "rgba(255,255,255,0.35)",
+                    cursor: "pointer",
+                    transition: "all 0.3s",
+                    padding: 0,
+                  }}
+                />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* ── RIGHT PANEL: Login Form ───────────────── */}
-      <div style={{
-        flex: "0 0 420px",
-        background: "#ffffff",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "3rem 2.5rem",
-        boxShadow: "-8px 0 40px rgba(0,0,0,0.15)",
-        position: "relative",
-        zIndex: 1,
-      }}>
-
+      {/* ── RIGHT: Login form ── */}
+      <div
+        style={{
+          // On mobile: full width. On desktop: fixed 420px.
+          flex: isMobile ? "1 1 100%" : "0 0 420px",
+          background: "#ffffff",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: isMobile ? "2rem 1.25rem" : "3rem 2.5rem",
+          boxShadow: isMobile ? "none" : "-8px 0 40px rgba(0,0,0,0.15)",
+          position: "relative",
+          zIndex: 1,
+          // Ensure form never overflows viewport width on any phone
+          width: isMobile ? "100%" : "420px",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+        }}
+      >
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <img
             src={logoImg}
             alt="DIST Logo"
             style={{
-              width: "110px",
-              height: "110px",
+              width: "90px",
+              height: "90px",
               borderRadius: "50%",
               objectFit: "cover",
               boxShadow: "0 4px 20px rgba(30,64,175,0.25)",
@@ -172,106 +263,165 @@ export default function Login() {
               marginBottom: "1rem",
             }}
           />
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#1e3a8a", margin: "0 0 4px" }}>
+          <h2
+            style={{
+              fontSize: "1.2rem",
+              fontWeight: 700,
+              color: "#1e3a8a",
+              margin: "0 0 4px",
+            }}
+          >
             Lab Inventory System
           </h2>
           <p style={{ fontSize: "0.8rem", color: "#6b7280", margin: 0, letterSpacing: "0.5px" }}>
-            DECCA Institute of Science & Technology
+            DECCA Institute of Science &amp; Technology
           </p>
         </div>
 
-        {/* Divider */}
-        <div style={{ width: "100%", borderTop: "1px solid #f0f0f0", marginBottom: "1.75rem" }} />
+        <div
+          style={{
+            width: "100%",
+            borderTop: "1px solid #f0f0f0",
+            marginBottom: "1.75rem",
+          }}
+        />
 
-        <p style={{ fontSize: "0.9rem", color: "#374151", fontWeight: 500, marginBottom: "1.25rem", alignSelf: "flex-start" }}>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "#374151",
+            fontWeight: 500,
+            marginBottom: "1.25rem",
+            alignSelf: "flex-start",
+            width: "100%",
+          }}
+        >
           Sign in to your account
         </p>
 
         {/* Error */}
         {error && (
-          <div style={{
-            width: "100%",
-            background: "#fef2f2",
-            border: "1px solid #fecaca",
-            color: "#dc2626",
-            borderRadius: "8px",
-            padding: "10px 14px",
-            fontSize: "0.83rem",
-            marginBottom: "1rem",
-          }}>
+          <div
+            style={{
+              width: "100%",
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              color: "#dc2626",
+              borderRadius: "8px",
+              padding: "10px 14px",
+              fontSize: "0.83rem",
+              marginBottom: "1rem",
+              boxSizing: "border-box",
+            }}
+          >
             {error}
           </div>
         )}
 
         {/* Email */}
-        <div style={{ width: "100%", marginBottom: "1rem" }}>
-          <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 500, color: "#374151", marginBottom: "6px" }}>
+        <div style={{ width: "100%", marginBottom: "1rem", boxSizing: "border-box" }}>
+          <label
+            style={{
+              display: "block",
+              fontSize: "0.78rem",
+              fontWeight: 500,
+              color: "#374151",
+              marginBottom: "6px",
+            }}
+          >
             Email address
           </label>
           <input
             type="email"
+            inputMode="email"
+            autoComplete="email"
             placeholder="you@decohas.ac.tz"
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             onKeyDown={onKey}
             disabled={loading}
-            style={{
-              width: "100%", border: "1.5px solid #e5e7eb", borderRadius: "8px",
-              padding: "10px 14px", fontSize: "0.88rem", color: "#111827",
-              outline: "none", boxSizing: "border-box",
-              background: loading ? "#f9fafb" : "#fff",
-            }}
-            onFocus={e => e.target.style.borderColor = "#3b82f6"}
-            onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+            style={inputStyle}
+            onFocus={(e) => { e.target.style.borderColor = "#3b82f6" }}
+            onBlur={(e)  => { e.target.style.borderColor = "#e5e7eb" }}
           />
         </div>
 
         {/* Password */}
-        <div style={{ width: "100%", marginBottom: "1.5rem" }}>
-          <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 500, color: "#374151", marginBottom: "6px" }}>
+        <div style={{ width: "100%", marginBottom: "1.5rem", boxSizing: "border-box" }}>
+          <label
+            style={{
+              display: "block",
+              fontSize: "0.78rem",
+              fontWeight: 500,
+              color: "#374151",
+              marginBottom: "6px",
+            }}
+          >
             Password
           </label>
           <input
             type="password"
+            autoComplete="current-password"
             placeholder="••••••••"
             value={password}
-            onChange={e => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             onKeyDown={onKey}
             disabled={loading}
-            style={{
-              width: "100%", border: "1.5px solid #e5e7eb", borderRadius: "8px",
-              padding: "10px 14px", fontSize: "0.88rem", color: "#111827",
-              outline: "none", boxSizing: "border-box",
-              background: loading ? "#f9fafb" : "#fff",
-            }}
-            onFocus={e => e.target.style.borderColor = "#3b82f6"}
-            onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+            style={inputStyle}
+            onFocus={(e) => { e.target.style.borderColor = "#3b82f6" }}
+            onBlur={(e)  => { e.target.style.borderColor = "#e5e7eb" }}
           />
         </div>
 
-        {/* Button */}
+        {/* Submit */}
         <button
           onClick={login}
           disabled={loading}
           style={{
             width: "100%",
-            background: loading ? "#93c5fd" : "linear-gradient(135deg, #1d4ed8, #1e40af)",
-            color: "#fff", border: "none", borderRadius: "8px",
-            padding: "11px", fontSize: "0.9rem", fontWeight: 600,
+            background: loading
+              ? "#93c5fd"
+              : "linear-gradient(135deg, #1d4ed8, #1e40af)",
+            color: "#fff",
+            border: "none",
+            borderRadius: "8px",
+            padding: "12px",
+            fontSize: "0.9rem",
+            fontWeight: 600,
             cursor: loading ? "not-allowed" : "pointer",
             letterSpacing: "0.3px",
-            boxShadow: "0 4px 14px rgba(29,78,216,0.35)",
+            boxShadow: loading ? "none" : "0 4px 14px rgba(29,78,216,0.35)",
             transition: "all 0.2s",
+            // Touch-friendly height
+            minHeight: "48px",
           }}
         >
           {loading ? "Signing in…" : "Sign in →"}
         </button>
 
-        <p style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "2rem", textAlign: "center" }}>
+        <div style={{ marginTop: "1.25rem", textAlign: "center" }}>
+          <p style={{ margin: "0 0 6px", fontSize: "0.8rem", color: "#6b7280" }}>
+            New student?{" "}
+            <Link
+              to="/register"
+              style={{ color: "#2563eb", fontWeight: 600, textDecoration: "none" }}
+            >
+              Register for lab access →
+            </Link>
+          </p>
+        </div>
+
+        <p
+          style={{
+            fontSize: "0.75rem",
+            color: "#9ca3af",
+            marginTop: "1rem",
+            textAlign: "center",
+          }}
+        >
           © {new Date().getFullYear()} DIST Labs · All rights reserved
         </p>
       </div>
-
     </div>
   )
 }

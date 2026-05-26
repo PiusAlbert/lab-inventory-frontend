@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react"
 import { fetchTransactions } from "../services/transactionsApi"
+import { useAuth } from "../context/AuthContext"
 import IssueStockModal    from "../components/IssueStockModal"
 import ReceiveStockModal  from "../components/ReceiveStockModal"
 
@@ -12,6 +13,8 @@ const TYPE_STYLES = {
 }
 
 export default function Transactions() {
+  const { role } = useAuth()
+  const isStudent = role === 'STUDENT'
 
   const [transactions, setTransactions] = useState([])
   const [loading,      setLoading]      = useState(true)
@@ -58,22 +61,24 @@ export default function Transactions() {
             {transactions.length} total · {totalReceived} received · {totalIssued} issued
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setReceiveModal({ itemId: null, itemName: null })}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium
-                       bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            ↓ Receive
-          </button>
-          <button
-            onClick={() => setIssueModal({ itemId: null, itemName: null })}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium
-                       bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
-          >
-            ↑ Issue
-          </button>
-        </div>
+        {!isStudent && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setReceiveModal({ itemId: null, itemName: null })}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium
+                         bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              ↓ Receive
+            </button>
+            <button
+              onClick={() => setIssueModal({ itemId: null, itemName: null })}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium
+                         bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+            >
+              ↑ Issue
+            </button>
+          </div>
+        )}
       </div>
 
       {/* FILTERS */}
@@ -169,30 +174,32 @@ export default function Transactions() {
                         {new Date(t.created_at).toLocaleString()}
                       </td>
 
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 justify-end">
-                          <button
-                            onClick={() => setReceiveModal({
-                              itemId:   t.items?.id ?? null,
-                              itemName: t.items?.name ?? null
-                            })}
-                            className="text-xs px-2 py-1 border border-gray-200 rounded
-                                       text-green-700 hover:bg-green-50 transition-colors"
-                          >
-                            Receive
-                          </button>
-                          <button
-                            onClick={() => setIssueModal({
-                              itemId:   t.items?.id ?? null,
-                              itemName: t.items?.name ?? null
-                            })}
-                            className="text-xs px-2 py-1 border border-gray-200 rounded
-                                       text-amber-700 hover:bg-amber-50 transition-colors"
-                          >
-                            Issue
-                          </button>
-                        </div>
-                      </td>
+                      {!isStudent && (
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1 justify-end">
+                            <button
+                              onClick={() => setReceiveModal({
+                                itemId:   t.items?.id ?? null,
+                                itemName: t.items?.name ?? null
+                              })}
+                              className="text-xs px-2 py-1 border border-gray-200 rounded
+                                         text-green-700 hover:bg-green-50 transition-colors"
+                            >
+                              Receive
+                            </button>
+                            <button
+                              onClick={() => setIssueModal({
+                                itemId:   t.items?.id ?? null,
+                                itemName: t.items?.name ?? null
+                              })}
+                              className="text-xs px-2 py-1 border border-gray-200 rounded
+                                         text-amber-700 hover:bg-amber-50 transition-colors"
+                            >
+                              Issue
+                            </button>
+                          </div>
+                        </td>
+                      )}
 
                     </tr>
                   )

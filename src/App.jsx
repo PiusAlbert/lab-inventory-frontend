@@ -4,7 +4,9 @@ import ProtectedRoute from "./components/ProtectedRoute"
 import Layout from "./components/Layout"
 
 import Login from "./pages/Login"
+import Register from "./pages/Register"
 import Dashboard from "./pages/Dashboard"
+import StudentDashboard from "./pages/StudentDashboard"
 import Categories from "./pages/Categories"
 import Items from "./pages/Items"
 import AddItem from "./pages/AddItem"
@@ -13,13 +15,19 @@ import StockBatches from "./pages/Batches"
 import Transactions from "./pages/Transactions"
 import ItemDetails from "./pages/ItemDetails"
 import Reports from "./pages/Reports"
+import Experiments from "./pages/Experiments"
+import ExperimentEditor from "./pages/ExperimentEditor"
+import ExperimentView from "./pages/ExperimentView"
+import ExperimentWizard from "./pages/ExperimentWizard"
+import StudentsManagement from "./pages/StudentsManagement"
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         {/* Public */}
-        <Route path="/" element={<Login />} />
+        <Route path="/"          element={<Login />} />
+        <Route path="/register"  element={<Register />} />
 
         {/* Protected routes */}
         <Route
@@ -28,6 +36,17 @@ export default function App() {
             <ProtectedRoute>
               <Layout>
                 <Dashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/student-dashboard"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <StudentDashboard />
               </Layout>
             </ProtectedRoute>
           }
@@ -116,6 +135,72 @@ export default function App() {
             <ProtectedRoute>
               <Layout>
                 <Reports />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/experiments"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Experiments />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/experiments/wizard"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ExperimentWizard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/experiments/new"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ExperimentEditor />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/experiments/:id"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ExperimentView />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/experiments/:id/edit"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ExperimentEditor />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/students"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <StudentsManagement />
               </Layout>
             </ProtectedRoute>
           }
