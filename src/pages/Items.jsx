@@ -196,7 +196,130 @@ export default function Items() {
         </select>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
+      {/* ── Mobile card list (hidden on sm+) ───────────────────────── */}
+      <div className="sm:hidden space-y-2">
+        {filtered.length === 0 ? (
+          <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-8 text-center text-sm text-gray-400">
+            No items found.
+          </div>
+        ) : filtered.map((item) => {
+          const catName =
+            categories.find((c) => c.id === item.category_id)?.name ||
+            item.categories?.name ||
+            null
+
+          return (
+            <div
+              key={item.id}
+              className="bg-white rounded-lg border border-gray-100 shadow-sm p-4"
+            >
+              {/* Name + badges row */}
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-800 text-sm leading-snug">
+                    {item.name}
+                  </p>
+                  {item.sku && (
+                    <p className="text-xs text-gray-400 font-mono mt-0.5">{item.sku}</p>
+                  )}
+                </div>
+                <span
+                  className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 ${
+                    TYPE_BADGE[item.item_type] || "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {item.item_type}
+                </span>
+              </div>
+
+              {/* Category + hazard */}
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                {catName && (
+                  <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">
+                    {catName}
+                  </span>
+                )}
+                {item.hazard_class && (
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      HAZARD_BADGE[item.hazard_class] || "bg-gray-50 text-gray-500"
+                    }`}
+                  >
+                    {item.hazard_class}
+                  </span>
+                )}
+              </div>
+
+              {/* Action buttons — full-width touch targets */}
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => navigate(`/items/${item.id}`)}
+                  className="flex-1 min-h-[40px] text-sm font-medium border border-gray-200 rounded-lg
+                             text-gray-700 bg-gray-50 hover:bg-gray-100 active:bg-gray-200
+                             transition-colors"
+                >
+                  View
+                </button>
+
+                {!isStudent && (
+                  <>
+                    <button
+                      onClick={() => guardedAction(() => navigate(`/items/${item.id}/edit`))}
+                      disabled={labRequired}
+                      className={`flex-1 min-h-[40px] text-sm font-medium rounded-lg border transition-colors ${
+                        labRequired
+                          ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
+                          : "border-blue-100 text-blue-600 bg-blue-50 hover:bg-blue-100 active:bg-blue-200"
+                      }`}
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={() => guardedAction(() => setReceiveModal(item))}
+                      disabled={labRequired}
+                      className={`flex-1 min-h-[40px] text-sm font-medium rounded-lg border transition-colors ${
+                        labRequired
+                          ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
+                          : "border-green-100 text-green-700 bg-green-50 hover:bg-green-100 active:bg-green-200"
+                      }`}
+                    >
+                      ↓ Receive
+                    </button>
+
+                    <button
+                      onClick={() => guardedAction(() => setIssueModal(item))}
+                      disabled={labRequired}
+                      className={`flex-1 min-h-[40px] text-sm font-medium rounded-lg border transition-colors ${
+                        labRequired
+                          ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
+                          : "border-amber-100 text-amber-700 bg-amber-50 hover:bg-amber-100 active:bg-amber-200"
+                      }`}
+                    >
+                      ↑ Issue
+                    </button>
+
+                    <button
+                      onClick={() => guardedAction(() => setDeleteTarget(item))}
+                      disabled={labRequired}
+                      className={`min-h-[40px] px-4 text-sm font-medium rounded-lg border transition-colors ${
+                        labRequired
+                          ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
+                          : "border-red-100 text-red-600 bg-red-50 hover:bg-red-100 active:bg-red-200"
+                      }`}
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ── Desktop table (hidden on mobile) ────────────────────────── */}
+      <div className="hidden sm:block bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr className="text-left text-gray-500 text-xs uppercase tracking-wide">
