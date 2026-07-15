@@ -17,6 +17,7 @@ const NAV_FULL = [
   { to: "/reports",      label: "Reports",       icon: "📊" },
   { to: "/experiments",  label: "Experiments",   icon: "🔬" },
   { to: "/students",     label: "Students",      icon: "👩‍🎓", managerOnly: true },
+  { to: "/laboratories", label: "Laboratories",  icon: "🏛",  adminOnly: true  },
 ]
 
 // Navigation items — students only
@@ -348,10 +349,11 @@ export default function Layout({ children }) {
   // Build nav items based on role
   const navItems = useMemo(() => {
     if (role === "STUDENT") return NAV_STUDENT
-    // For full-nav roles, filter managerOnly items by role
-    return NAV_FULL.filter(item =>
-      !item.managerOnly || MANAGER_ROLES.includes(role)
-    )
+    return NAV_FULL.filter(item => {
+      if (item.adminOnly)   return role === "SUPER_ADMIN"
+      if (item.managerOnly) return MANAGER_ROLES.includes(role)
+      return true
+    })
   }, [role])
 
   const [drawerOpen,  setDrawerOpen]  = useState(false)

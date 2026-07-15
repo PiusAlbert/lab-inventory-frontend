@@ -20,6 +20,7 @@ import ExperimentEditor from "./pages/ExperimentEditor"
 import ExperimentView from "./pages/ExperimentView"
 import ExperimentWizard from "./pages/ExperimentWizard"
 import StudentsManagement from "./pages/StudentsManagement"
+import Laboratories from "./pages/Laboratories"
 
 export default function App() {
   return (
@@ -201,6 +202,17 @@ export default function App() {
             <ProtectedRoute>
               <Layout>
                 <StudentsManagement />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/laboratories"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Laboratories />
               </Layout>
             </ProtectedRoute>
           }
