@@ -47,7 +47,7 @@ export default function Experiments() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting,     setDeleting]     = useState(false)
 
-  const isManager = ["LAB_MANAGER", "SUPER_ADMIN", "ADMIN"].includes(role)
+  const isManager = ["TECHNICIAN", "LAB_MANAGER", "SUPER_ADMIN", "ADMIN"].includes(role)
 
   const load = useCallback(async () => {
     setLoading(true)

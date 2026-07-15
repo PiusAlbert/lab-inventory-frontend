@@ -28,7 +28,7 @@ const NAV_STUDENT = [
   { to: "/bookings",           label: "My Bookings",   icon: "📅" },
   { to: "/items",              label: "Browse Items",   icon: "📦" },
   { to: "/experiments",        label: "My Experiments", icon: "🔬" },
-  { to: "/experiments/wizard", label: "New Experiment", icon: "➕" },
+  { to: "/experiments/wizard", label: "Submit Report", icon: "➕" },
 ]
 
 const MANAGER_ROLES = ["LAB_MANAGER", "SUPER_ADMIN", "ADMIN"]

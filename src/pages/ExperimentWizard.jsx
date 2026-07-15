@@ -48,7 +48,7 @@ function StatusBadge({ status }) {
   )
 }
 
-const STEP_LABELS = ["Experiment Details", "Materials & Equipment", "Review & Submit"]
+const STEP_LABELS = ["Report Details", "Materials & Equipment Used", "Review & Submit"]
 
 export default function ExperimentWizard() {
   const navigate = useNavigate()
@@ -236,10 +236,10 @@ export default function ExperimentWizard() {
       {/* Header */}
       <div style={{ marginBottom: "1.5rem" }}>
         <h1 style={{ margin: "0 0 4px", fontSize: "1.3rem", fontWeight: 700, color: "#0f172a" }}>
-          New Experiment Request
+          Submit Experiment Report
         </h1>
         <p style={{ margin: 0, fontSize: "0.82rem", color: "#64748b" }}>
-          Submit your experiment plan for lab manager review.
+          Submit your post-experiment report for assessment by the lab team.
         </p>
       </div>
 
@@ -287,15 +287,14 @@ export default function ExperimentWizard() {
             />
           </Field>
 
-          <Field label="Planned Session Date" required>
+          <Field label="Date Performed" required>
             <input
               style={inp} type="date" value={form.session_date}
               onChange={e => set("session_date", e.target.value)}
-              min={new Date().toISOString().slice(0, 10)}
             />
           </Field>
 
-          <Field label="Objective / Hypothesis">
+          <Field label="Objective / Hypothesis (as performed)">
             <textarea
               style={{ ...inp, minHeight: "90px", resize: "vertical" }}
               value={form.objective}
@@ -314,7 +313,7 @@ export default function ExperimentWizard() {
               cursor: loading ? "not-allowed" : "pointer", marginTop: "0.25rem",
             }}
           >
-            {loading ? "Creating draft…" : "Continue — Add Materials →"}
+            {loading ? "Saving…" : "Continue — Add Materials Used →"}
           </button>
         </div>
       )}
@@ -326,7 +325,7 @@ export default function ExperimentWizard() {
           {/* Materials section */}
           <div style={card}>
             <h3 style={{ margin: "0 0 1rem", fontSize: "0.95rem", fontWeight: 700, color: "#0f172a" }}>
-              📋 Materials Required
+              📋 Materials Used
             </h3>
 
             {/* Added materials */}
@@ -547,7 +546,7 @@ export default function ExperimentWizard() {
           {/* Equipment section */}
           <div style={card}>
             <h3 style={{ margin: "0 0 1rem", fontSize: "0.95rem", fontWeight: 700, color: "#0f172a" }}>
-              🔧 Equipment Required
+              🔧 Equipment Used
             </h3>
 
             {equipment.length > 0 && (
@@ -677,7 +676,7 @@ export default function ExperimentWizard() {
             background: "#fffbeb", border: "1px solid #fde68a",
             borderRadius: "10px", padding: "12px 16px", fontSize: "0.82rem", color: "#92400e",
           }}>
-            ℹ️ After submission, the lab manager will review your request. You will be notified once it is approved or if changes are needed.
+            ℹ️ After submission, the lab team (manager and technician) will assess your report. You will be notified of the outcome.
           </div>
 
           <div style={{ display: "flex", gap: "8px" }}>
@@ -711,7 +710,7 @@ export default function ExperimentWizard() {
                 fontSize: "0.85rem", fontWeight: 600, cursor: loading ? "not-allowed" : "pointer",
               }}
             >
-              {loading ? "Submitting…" : "Submit for Review ✓"}
+              {loading ? "Submitting…" : "Submit Report ✓"}
             </button>
           </div>
         </div>

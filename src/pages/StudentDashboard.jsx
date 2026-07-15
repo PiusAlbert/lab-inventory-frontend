@@ -98,7 +98,7 @@ export default function StudentDashboard() {
             boxShadow: "0 4px 12px rgba(37,99,235,0.25)",
           }}
         >
-          🔬 New Experiment
+          📄 Submit Report
         </button>
         <Link to="/items" style={{
           background: "#fff", color: "#374151", border: "1px solid #e2e8f0",
@@ -114,7 +114,7 @@ export default function StudentDashboard() {
           fontWeight: 500, cursor: "pointer", textDecoration: "none",
           display: "flex", alignItems: "center", gap: "6px",
         }}>
-          📄 All Experiments
+          📋 All Reports
         </Link>
       </div>
 
@@ -126,7 +126,7 @@ export default function StudentDashboard() {
         marginBottom: "1.75rem",
       }}>
         <StatCard
-          label="Total Experiments" value={experiments.length}
+          label="Total Reports" value={experiments.length}
           color="#0f172a" bg="#f8fafc" icon="🧪"
         />
         <StatCard
@@ -168,10 +168,10 @@ export default function StudentDashboard() {
           <div style={{ padding: "2.5rem", textAlign: "center" }}>
             <p style={{ fontSize: "1.75rem", marginBottom: "0.5rem" }}>🔬</p>
             <p style={{ margin: "0 0 8px", fontWeight: 600, color: "#374151", fontSize: "0.9rem" }}>
-              No experiments yet
+              No reports yet
             </p>
             <p style={{ margin: "0 0 1.25rem", color: "#94a3b8", fontSize: "0.82rem" }}>
-              Submit your first experiment request to get started.
+              Submit your first experiment report to get started.
             </p>
             <button
               onClick={() => navigate("/experiments/wizard")}
@@ -181,7 +181,7 @@ export default function StudentDashboard() {
                 fontSize: "0.83rem", fontWeight: 600, cursor: "pointer",
               }}
             >
-              Start Experiment Wizard
+              Submit a Report
             </button>
           </div>
         ) : (
