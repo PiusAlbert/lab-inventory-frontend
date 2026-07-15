@@ -16,6 +16,7 @@ const NAV_FULL = [
   { to: "/transactions", label: "Transactions",  icon: "↕"  },
   { to: "/reports",      label: "Reports",       icon: "📊" },
   { to: "/experiments",  label: "Experiments",   icon: "🔬" },
+  { to: "/users",        label: "Users",         icon: "👤",  managerOnly: true },
   { to: "/students",     label: "Students",      icon: "👩‍🎓", managerOnly: true },
   { to: "/laboratories", label: "Laboratories",  icon: "🏛",  adminOnly: true  },
 ]

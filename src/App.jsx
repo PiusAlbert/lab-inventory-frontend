@@ -21,6 +21,7 @@ import ExperimentView from "./pages/ExperimentView"
 import ExperimentWizard from "./pages/ExperimentWizard"
 import StudentsManagement from "./pages/StudentsManagement"
 import Laboratories from "./pages/Laboratories"
+import Users from "./pages/Users"
 
 export default function App() {
   return (
@@ -213,6 +214,17 @@ export default function App() {
             <ProtectedRoute>
               <Layout>
                 <Laboratories />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Users />
               </Layout>
             </ProtectedRoute>
           }
