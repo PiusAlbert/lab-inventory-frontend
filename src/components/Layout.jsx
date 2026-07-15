@@ -16,6 +16,7 @@ const NAV_FULL = [
   { to: "/transactions", label: "Transactions",  icon: "↕"  },
   { to: "/reports",      label: "Reports",       icon: "📊" },
   { to: "/experiments",  label: "Experiments",   icon: "🔬" },
+  { to: "/bookings",     label: "Bookings",      icon: "📅"  },
   { to: "/users",        label: "Users",         icon: "👤",  managerOnly: true },
   { to: "/students",     label: "Students",      icon: "👩‍🎓", managerOnly: true },
   { to: "/laboratories", label: "Laboratories",  icon: "🏛",  adminOnly: true  },
@@ -24,6 +25,7 @@ const NAV_FULL = [
 // Navigation items — students only
 const NAV_STUDENT = [
   { to: "/student-dashboard",  label: "My Dashboard",  icon: "🏠" },
+  { to: "/bookings",           label: "My Bookings",   icon: "📅" },
   { to: "/items",              label: "Browse Items",   icon: "📦" },
   { to: "/experiments",        label: "My Experiments", icon: "🔬" },
   { to: "/experiments/wizard", label: "New Experiment", icon: "➕" },

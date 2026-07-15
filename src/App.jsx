@@ -22,6 +22,7 @@ import ExperimentWizard from "./pages/ExperimentWizard"
 import StudentsManagement from "./pages/StudentsManagement"
 import Laboratories from "./pages/Laboratories"
 import Users from "./pages/Users"
+import Bookings from "./pages/Bookings"
 
 export default function App() {
   return (
@@ -225,6 +226,17 @@ export default function App() {
             <ProtectedRoute>
               <Layout>
                 <Users />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/bookings"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Bookings />
               </Layout>
             </ProtectedRoute>
           }
