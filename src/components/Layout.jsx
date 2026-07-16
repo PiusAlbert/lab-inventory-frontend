@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
 import api from "../lib/api"
+import NotificationBell from "./NotificationBell"
 
 import logoImg from "../assets/logo.jpg"
 import labBg   from "../assets/lab-bw-glass.jpg"
@@ -530,6 +531,11 @@ export default function Layout({ children }) {
             </p>
           </div>
 
+          {/* Notification bell */}
+          <div style={{ color: "#f1f5f9" }}>
+            <NotificationBell />
+          </div>
+
           {/* User initials */}
           <div
             style={{
@@ -719,6 +725,9 @@ export default function Layout({ children }) {
           </div>
 
           <div style={{ flex: 1 }} />
+
+          {/* Notification bell */}
+          <NotificationBell />
 
           {/* Lab status pill */}
           <div
