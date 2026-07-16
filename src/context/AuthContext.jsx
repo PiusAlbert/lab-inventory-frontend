@@ -145,6 +145,10 @@ export function AuthProvider({ children }) {
   const requiresLabSelection = isAdmin && !selectedLabId
 
   // ── Setters exposed to consumers ────────────────────────────────────
+  const updateFullName = (name) => {
+    setAppUser(prev => prev ? { ...prev, full_name: name } : prev)
+  }
+
   const setSelectedLabId = (id) => {
     const normalized =
       id && id !== 'null' && id !== 'undefined' && String(id).trim() !== ''
@@ -174,6 +178,7 @@ export function AuthProvider({ children }) {
       labId:              profileLabId,   // backward-compat alias
       profileLabId,
       selectedLabId,
+      updateFullName,
       setSelectedLabId,
       clearSelectedLab,
       effectiveLabId,

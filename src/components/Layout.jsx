@@ -17,9 +17,10 @@ const NAV_FULL = [
   { to: "/reports",      label: "Reports",       icon: "📊" },
   { to: "/experiments",  label: "Experiments",   icon: "🔬" },
   { to: "/bookings",     label: "Bookings",      icon: "📅"  },
-  { to: "/users",        label: "Users",         icon: "👤",  managerOnly: true },
+  { to: "/users",        label: "Users",         icon: "👥",  managerOnly: true },
   { to: "/students",     label: "Students",      icon: "👩‍🎓", managerOnly: true },
   { to: "/laboratories", label: "Laboratories",  icon: "🏛",  adminOnly: true  },
+  { to: "/profile",      label: "My Profile",    icon: "⚙️"  },
 ]
 
 // Navigation items — students only
@@ -29,6 +30,7 @@ const NAV_STUDENT = [
   { to: "/items",              label: "Browse Items",   icon: "📦" },
   { to: "/experiments",        label: "My Experiments", icon: "🔬" },
   { to: "/experiments/wizard", label: "Submit Report", icon: "➕" },
+  { to: "/profile",            label: "My Profile",   icon: "⚙️" },
 ]
 
 const MANAGER_ROLES = ["LAB_MANAGER", "SUPER_ADMIN", "ADMIN"]

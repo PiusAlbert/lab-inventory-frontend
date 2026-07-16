@@ -20,6 +20,7 @@ import ExperimentEditor from "./pages/ExperimentEditor"
 import ExperimentView from "./pages/ExperimentView"
 import ExperimentWizard from "./pages/ExperimentWizard"
 import StudentsManagement from "./pages/StudentsManagement"
+import Profile from "./pages/Profile"
 import Laboratories from "./pages/Laboratories"
 import Users from "./pages/Users"
 import Bookings from "./pages/Bookings"
@@ -237,6 +238,17 @@ export default function App() {
             <ProtectedRoute>
               <Layout>
                 <Bookings />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Profile />
               </Layout>
             </ProtectedRoute>
           }
