@@ -4,6 +4,8 @@ import { fetchBatches } from "../services/batchesApi"
 import { useAuth } from "../context/AuthContext"
 import ReceiveStockModal from "../components/ReceiveStockModal"
 import EditBatchModal from "../components/EditBatchModal"
+import Pagination from "../components/Pagination"
+import { exportCSV } from "../utils/csvExport"
 
 function daysUntil(dateStr) {
   if (!dateStr) return null
@@ -65,15 +67,17 @@ export default function StockBatches() {
   const { isAdmin, requiresLabSelection, role } = useAuth()
   const isStudent = role === 'STUDENT'
 
-  const [batches, setBatches] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [batches,    setBatches]    = useState([])
+  const [pagination, setPagination] = useState(null)
+  const [page,       setPage]       = useState(1)
+  const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState(null)
 
-  const [search, setSearch] = useState("")
+  const [search,   setSearch]   = useState("")
   const [expiring, setExpiring] = useState(searchParams.get("filter") === "expiring")
 
   const [receiveModal, setReceiveModal] = useState(null)
-  const [editBatch, setEditBatch] = useState(null)
+  const [editBatch,    setEditBatch]    = useState(null)
 
   const labRequired = isAdmin && requiresLabSelection
 
@@ -82,13 +86,13 @@ export default function StockBatches() {
     fn()
   }
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (p = 1) => {
     setLoading(true)
     setError(null)
-
     try {
-      const data = await fetchBatches()
-      setBatches(Array.isArray(data) ? data : [])
+      const res = await fetchBatches({ page: p, limit: 50 })
+      setBatches(Array.isArray(res.data) ? res.data : [])
+      setPagination(res.pagination || null)
     } catch (err) {
       setError(err.response?.data?.error || err.message || "Failed to load batches")
     } finally {
@@ -97,9 +101,13 @@ export default function StockBatches() {
   }, [])
 
   useEffect(() => {
-    load()
-    window.addEventListener("labChanged", load)
-    return () => window.removeEventListener("labChanged", load)
+    load(page)
+  }, [load, page])
+
+  useEffect(() => {
+    const handler = () => { setPage(1); load(1) }
+    window.addEventListener("labChanged", handler)
+    return () => window.removeEventListener("labChanged", handler)
   }, [load])
 
   const filtered = batches.filter((b) => {
@@ -118,21 +126,25 @@ export default function StockBatches() {
     return matchSearch && matchExpiring
   })
 
-  const totalBatchCount = filtered.length
-  const uniqueItemCount = new Set(filtered.map((b) => b.item_id).filter(Boolean)).size
-  const activeBatchCount = filtered.filter(
-    (b) => Number(b.current_quantity || 0) > 0
-  ).length
+  const totalBatchCount  = pagination?.total ?? filtered.length
+  const uniqueItemCount  = new Set(filtered.map((b) => b.item_id).filter(Boolean)).size
+  const activeBatchCount = filtered.filter((b) => Number(b.current_quantity || 0) > 0).length
+  const totalReceived    = filtered.reduce((sum, b) => sum + Number(b.quantity_received || 0), 0)
+  const totalAvailable   = filtered.reduce((sum, b) => sum + Number(b.current_quantity  || 0), 0)
 
-  const totalReceived = filtered.reduce(
-    (sum, b) => sum + Number(b.quantity_received || 0),
-    0
-  )
-
-  const totalAvailable = filtered.reduce(
-    (sum, b) => sum + Number(b.current_quantity || 0),
-    0
-  )
+  const handleExport = () => {
+    exportCSV("stock-batches.csv", [
+      { label: "Item Name",      value: b => b.items?.name },
+      { label: "SKU",            value: b => b.items?.sku },
+      { label: "Batch #",        value: b => b.batch_number },
+      { label: "Unit",           value: b => b.items?.dispensing_unit || b.items?.unit_of_measure },
+      { label: "Qty Received",   value: b => b.quantity_received },
+      { label: "Qty Available",  value: b => b.current_quantity },
+      { label: "Expiry Date",    value: b => b.expiry_date },
+      { label: "Location",       value: b => b.storage_location },
+      { label: "Received At",    value: b => b.received_at ? new Date(b.received_at).toLocaleDateString() : "" },
+    ], filtered)
+  }
 
   return (
     <div className="space-y-5">
@@ -154,25 +166,34 @@ export default function StockBatches() {
             Batch-level stock records by item, showing received and available balances
           </p>
         </div>
+        <button
+          onClick={handleExport}
+          disabled={filtered.length === 0}
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border
+                     border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50
+                     disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          ↓ Export CSV
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
         <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4">
           <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Batch records</p>
-          <p className="text-2xl font-bold text-gray-800">{totalBatchCount}</p>
-          <p className="text-xs text-gray-400 mt-1">Each row is one item batch record</p>
+          <p className="text-2xl font-bold text-gray-800">{totalBatchCount.toLocaleString()}</p>
+          <p className="text-xs text-gray-400 mt-1">Total across all pages</p>
         </div>
 
         <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4">
           <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Unique items</p>
           <p className="text-2xl font-bold text-indigo-700">{uniqueItemCount}</p>
-          <p className="text-xs text-gray-400 mt-1">Distinct items represented in the list</p>
+          <p className="text-xs text-gray-400 mt-1">Distinct items on this page</p>
         </div>
 
         <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4">
           <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Active batches</p>
           <p className="text-2xl font-bold text-emerald-700">{activeBatchCount}</p>
-          <p className="text-xs text-gray-400 mt-1">Batches with available stock above zero</p>
+          <p className="text-xs text-gray-400 mt-1">Batches with stock above zero</p>
         </div>
 
         <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4">
@@ -180,7 +201,7 @@ export default function StockBatches() {
           <p className="text-2xl font-bold text-blue-700">
             {Number(totalReceived).toLocaleString()}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Sum of recorded received quantities</p>
+          <p className="text-xs text-gray-400 mt-1">Sum of received quantities</p>
         </div>
 
         <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4">
@@ -188,7 +209,7 @@ export default function StockBatches() {
           <p className="text-2xl font-bold text-green-700">
             {Number(totalAvailable).toLocaleString()}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Sum of remaining quantities in store</p>
+          <p className="text-xs text-gray-400 mt-1">Sum of remaining quantities</p>
         </div>
       </div>
 
@@ -213,7 +234,7 @@ export default function StockBatches() {
         </label>
 
         <span className="ml-auto text-xs text-gray-400">
-          {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+          {filtered.length} result{filtered.length !== 1 ? "s" : ""} on this page
         </span>
       </div>
 
@@ -335,6 +356,7 @@ export default function StockBatches() {
               </tbody>
             </table>
           </div>
+          <Pagination pagination={pagination} onPageChange={setPage} />
         </div>
       )}
 
@@ -342,7 +364,7 @@ export default function StockBatches() {
         <ReceiveStockModal
           {...receiveModal}
           onClose={() => setReceiveModal(null)}
-          onSuccess={load}
+          onSuccess={() => load(page)}
         />
       )}
 
@@ -351,7 +373,7 @@ export default function StockBatches() {
           batch={editBatch}
           item={editBatch.items}
           onClose={() => setEditBatch(null)}
-          onSuccess={load}
+          onSuccess={() => load(page)}
         />
       )}
     </div>

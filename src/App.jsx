@@ -22,6 +22,7 @@ import ExperimentWizard from "./pages/ExperimentWizard"
 import StudentsManagement from "./pages/StudentsManagement"
 import Profile from "./pages/Profile"
 import BulkImport from "./pages/BulkImport"
+import AuditLog from "./pages/AuditLog"
 import Laboratories from "./pages/Laboratories"
 import Users from "./pages/Users"
 import Bookings from "./pages/Bookings"
@@ -250,6 +251,17 @@ export default function App() {
             <ProtectedRoute>
               <Layout>
                 <BulkImport />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/audit"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <AuditLog />
               </Layout>
             </ProtectedRoute>
           }

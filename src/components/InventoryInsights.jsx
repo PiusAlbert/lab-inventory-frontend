@@ -1,12 +1,3 @@
-/**
- * InventoryInsights
- *
- * Receives the full dashboard data object:
- *   total_items, low_stock, expiring_soon, inventory_value,
- *   low_stock_items[], expiring_batches[], stock_by_category[],
- *   recent_transactions[], is_all_labs
- */
-
 function daysUntil(dateStr) {
   if (!dateStr) return null
   return Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24))
@@ -21,17 +12,26 @@ function HealthScore({ total, lowStock, expiring }) {
   const score     = Math.max(0, Math.round(100 - penalty))
 
   const { color, label, bg } =
-    score >= 80 ? { color: "text-green-600",  bg: "bg-green-100",  label: "Healthy"  } :
-    score >= 50 ? { color: "text-amber-600",  bg: "bg-amber-100",  label: "Moderate" } :
-                  { color: "text-red-600",    bg: "bg-red-100",    label: "Critical" }
+    score >= 80 ? { color: "text-green-600",  bg: "bg-green-50",  label: "Healthy"  } :
+    score >= 50 ? { color: "text-amber-600",  bg: "bg-amber-50",  label: "Moderate" } :
+                  { color: "text-red-600",    bg: "bg-red-50",    label: "Critical" }
 
   return (
     <div className={`flex items-center justify-between rounded-lg px-4 py-3 ${bg}`}>
       <div>
-        <p className="text-xs font-medium text-gray-500">Inventory health</p>
+        <p className="text-xs font-medium text-gray-500 flex items-center gap-1.5">
+          Inventory health
+          <span
+            className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full
+                       bg-gray-200 text-gray-500 text-[9px] cursor-help leading-none"
+            title="100% = all stock healthy. Deducted for items below minimum (×1.5 weight) and expiring batches (×1 weight)."
+          >
+            ?
+          </span>
+        </p>
         <p className={`text-2xl font-bold mt-0.5 ${color}`}>{score}%</p>
       </div>
-      <span className={`text-xs font-semibold px-3 py-1 rounded-full ${bg} ${color} border border-current border-opacity-30`}>
+      <span className={`text-xs font-semibold px-3 py-1 rounded-full ${color} border border-current border-opacity-20`}>
         {label}
       </span>
     </div>
@@ -48,7 +48,7 @@ function StatRow({ icon, label, value, sub, valueColor = "text-gray-800" }) {
           {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
         </div>
       </div>
-      <span className={`text-sm font-semibold ${valueColor}`}>{value}</span>
+      <span className={`text-sm font-semibold ${valueColor} flex-shrink-0 ml-3`}>{value}</span>
     </div>
   )
 }
@@ -56,7 +56,7 @@ function StatRow({ icon, label, value, sub, valueColor = "text-gray-800" }) {
 export default function InventoryInsights({ data }) {
 
   if (!data) return (
-    <div className="bg-white shadow rounded-lg p-6 text-sm text-gray-400">
+    <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-6 text-sm text-gray-400">
       No data available
     </div>
   )
@@ -72,10 +72,8 @@ export default function InventoryInsights({ data }) {
     is_all_labs        = false,
   } = data
 
-  // Top category by quantity
   const topCategory = stock_by_category[0] ?? null
 
-  // Most urgent expiry
   const nextExpiry = expiring_batches
     .filter(b => b.expiry_date)
     .sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date))[0] ?? null
@@ -83,7 +81,7 @@ export default function InventoryInsights({ data }) {
   const nextExpiryDays = nextExpiry ? daysUntil(nextExpiry.expiry_date) : null
 
   return (
-    <div className="bg-white shadow rounded-lg p-6 space-y-5">
+    <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-6 space-y-5">
 
       <h3 className="text-base font-semibold text-gray-800">
         Inventory Insights
@@ -95,44 +93,42 @@ export default function InventoryInsights({ data }) {
         )}
       </h3>
 
-      {/* HEALTH SCORE */}
       <HealthScore
         total={total_items}
         lowStock={low_stock}
         expiring={expiring_soon}
       />
 
-      {/* KEY STATS */}
       <div>
         <StatRow
           icon="📦"
           label="Total items tracked"
-          value={total_items}
+          value={total_items.toLocaleString()}
         />
         <StatRow
           icon="⚠️"
           label="Below minimum threshold"
           sub="Items needing restock"
-          value={low_stock}
+          value={low_stock.toLocaleString()}
           valueColor={low_stock > 0 ? "text-red-600" : "text-green-600"}
         />
         <StatRow
           icon="⏳"
           label="Batches expiring soon"
           sub="Within the next 30 days"
-          value={expiring_soon}
+          value={expiring_soon.toLocaleString()}
           valueColor={expiring_soon > 0 ? "text-amber-600" : "text-green-600"}
         />
         <StatRow
           icon="💰"
           label="Estimated inventory value"
-          value={`$${Number(inventory_value).toLocaleString()}`}
+          value={`TZS ${Number(inventory_value).toLocaleString()}`}
         />
         {topCategory && (
           <StatRow
             icon="🏷️"
             label="Largest category"
-            sub={`${topCategory.total_quantity} units in stock`}
+            sub={`${topCategory.total_quantity.toLocaleString()} units in stock`}
             value={topCategory.category}
             valueColor="text-blue-600"
           />
@@ -148,13 +144,13 @@ export default function InventoryInsights({ data }) {
         )}
       </div>
 
-      {/* TOP LOW STOCK ITEMS */}
+      {/* Critical items with progress bars */}
       {low_stock_items.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
             Critical items
           </p>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {low_stock_items.slice(0, 5).map(item => {
               const pct = item.minimum_threshold > 0
                 ? Math.min(100, (item.current_stock / item.minimum_threshold) * 100)
@@ -162,22 +158,16 @@ export default function InventoryInsights({ data }) {
               return (
                 <div key={item.id}>
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs text-gray-700 truncate max-w-[65%]">
-                      {item.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-700 truncate max-w-[65%]">{item.name}</p>
+                    <p className="text-xs text-gray-500 flex-shrink-0 ml-2">
                       {item.current_stock}
-                      <span className="text-gray-400">
-                        /{item.minimum_threshold} {item.unit_of_measure}
-                      </span>
+                      <span className="text-gray-400">/{item.minimum_threshold} {item.unit_of_measure}</span>
                     </p>
                   </div>
                   <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all ${
-                        pct === 0   ? "bg-red-500"   :
-                        pct < 50   ? "bg-amber-400" :
-                                     "bg-green-400"
+                        pct === 0 ? "bg-red-500" : pct < 50 ? "bg-amber-400" : "bg-green-400"
                       }`}
                       style={{ width: `${pct}%` }}
                     />
@@ -189,7 +179,7 @@ export default function InventoryInsights({ data }) {
         </div>
       )}
 
-      {/* EXPIRING BATCHES PREVIEW */}
+      {/* Expiring batches */}
       {expiring_batches.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
@@ -199,12 +189,11 @@ export default function InventoryInsights({ data }) {
             {expiring_batches.slice(0, 4).map(batch => {
               const days = daysUntil(batch.expiry_date)
               return (
-                <div key={batch.id}
-                  className="flex items-center justify-between text-xs">
+                <div key={batch.id} className="flex items-center justify-between text-xs">
                   <p className="text-gray-700 truncate max-w-[65%]">
                     {batch.items?.name ?? "Unknown"}
                   </p>
-                  <span className={`font-medium px-2 py-0.5 rounded-full ${
+                  <span className={`font-medium px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
                     days <= 0  ? "bg-red-100 text-red-700"    :
                     days <= 7  ? "bg-red-50 text-red-600"     :
                     days <= 14 ? "bg-amber-50 text-amber-700" :
@@ -219,7 +208,6 @@ export default function InventoryInsights({ data }) {
         </div>
       )}
 
-      {/* ALL CLEAR */}
       {low_stock === 0 && expiring_soon === 0 && total_items > 0 && (
         <div className="bg-green-50 border border-green-100 rounded-lg px-4 py-3
                         text-sm text-green-700 flex items-center gap-2">

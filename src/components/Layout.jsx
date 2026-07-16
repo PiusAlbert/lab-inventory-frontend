@@ -21,6 +21,7 @@ const NAV_FULL = [
   { to: "/bookings",     label: "Bookings",      icon: "📅"  },
   { to: "/users",        label: "Users",         icon: "👥",  managerOnly: true },
   { to: "/students",     label: "Students",      icon: "👩‍🎓", managerOnly: true },
+  { to: "/audit",        label: "Audit Log",     icon: "📋",  managerOnly: true },
   { to: "/laboratories", label: "Laboratories",  icon: "🏛",  adminOnly: true  },
   { to: "/profile",      label: "My Profile",    icon: "⚙️"  },
 ]

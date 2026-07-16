@@ -3,6 +3,8 @@ import { fetchTransactions } from "../services/transactionsApi"
 import { useAuth } from "../context/AuthContext"
 import IssueStockModal    from "../components/IssueStockModal"
 import ReceiveStockModal  from "../components/ReceiveStockModal"
+import Pagination from "../components/Pagination"
+import { exportCSV } from "../utils/csvExport"
 
 const TYPE_STYLES = {
   ISSUE:        { bg: "bg-red-50   text-red-700",   label: "Issue"   },
@@ -17,6 +19,8 @@ export default function Transactions() {
   const isStudent = role === 'STUDENT'
 
   const [transactions, setTransactions] = useState([])
+  const [pagination,   setPagination]   = useState(null)
+  const [page,         setPage]         = useState(1)
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState(null)
   const [search,       setSearch]       = useState("")
@@ -24,10 +28,12 @@ export default function Transactions() {
   const [issueModal,   setIssueModal]   = useState(null)
   const [receiveModal, setReceiveModal] = useState(null)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (p = 1) => {
     setLoading(true); setError(null)
     try {
-      setTransactions(await fetchTransactions())
+      const res = await fetchTransactions({ page: p, limit: 50 })
+      setTransactions(Array.isArray(res.data) ? res.data : [])
+      setPagination(res.pagination || null)
     } catch (err) {
       setError(err.message || "Failed to load transactions")
     } finally {
@@ -35,7 +41,15 @@ export default function Transactions() {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load(page)
+  }, [load, page])
+
+  useEffect(() => {
+    const handler = () => { setPage(1); load(1) }
+    window.addEventListener("labChanged", handler)
+    return () => window.removeEventListener("labChanged", handler)
+  }, [load])
 
   const filtered = transactions.filter(t => {
     const q = search.toLowerCase()
@@ -50,6 +64,18 @@ export default function Transactions() {
   const totalIssued   = transactions.filter(t => t.transaction_type === "ISSUE").length
   const totalReceived = transactions.filter(t => t.transaction_type === "RECEIVE").length
 
+  const handleExport = () => {
+    exportCSV("transactions.csv", [
+      { label: "Date",      value: t => new Date(t.created_at).toLocaleString() },
+      { label: "Type",      value: t => t.transaction_type },
+      { label: "Item",      value: t => t.items?.name },
+      { label: "SKU",       value: t => t.items?.sku },
+      { label: "Quantity",  value: t => t.quantity },
+      { label: "Unit",      value: t => t.items?.unit_of_measure },
+      { label: "Reference", value: t => t.reference },
+    ], filtered)
+  }
+
   return (
     <div className="space-y-5">
 
@@ -58,27 +84,39 @@ export default function Transactions() {
         <div>
           <h2 className="text-xl font-semibold text-gray-800">Transactions</h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            {transactions.length} total · {totalReceived} received · {totalIssued} issued
+            {pagination ? `${pagination.total.toLocaleString()} total` : `${transactions.length} on this page`}
+            {" · "}{totalReceived} received · {totalIssued} issued
           </p>
         </div>
-        {!isStudent && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => setReceiveModal({ itemId: null, itemName: null })}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium
-                         bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              ↓ Receive
-            </button>
-            <button
-              onClick={() => setIssueModal({ itemId: null, itemName: null })}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium
-                         bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
-            >
-              ↑ Issue
-            </button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <button
+            onClick={handleExport}
+            disabled={filtered.length === 0}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border
+                       border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50
+                       disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            ↓ Export CSV
+          </button>
+          {!isStudent && (
+            <>
+              <button
+                onClick={() => setReceiveModal({ itemId: null, itemName: null })}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium
+                           bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                ↓ Receive
+              </button>
+              <button
+                onClick={() => setIssueModal({ itemId: null, itemName: null })}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium
+                           bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+              >
+                ↑ Issue
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* FILTERS */}
@@ -114,7 +152,7 @@ export default function Transactions() {
           </button>
         )}
         <span className="ml-auto text-xs text-gray-400">
-          {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+          {filtered.length} result{filtered.length !== 1 ? "s" : ""} on this page
         </span>
       </div>
 
@@ -207,6 +245,7 @@ export default function Transactions() {
               </tbody>
             </table>
           </div>
+          <Pagination pagination={pagination} onPageChange={setPage} />
         </div>
       )}
 
@@ -214,14 +253,14 @@ export default function Transactions() {
         <IssueStockModal
           {...issueModal}
           onClose={() => setIssueModal(null)}
-          onSuccess={load}
+          onSuccess={() => load(page)}
         />
       )}
       {receiveModal && (
         <ReceiveStockModal
           {...receiveModal}
           onClose={() => setReceiveModal(null)}
-          onSuccess={load}
+          onSuccess={() => load(page)}
         />
       )}
 

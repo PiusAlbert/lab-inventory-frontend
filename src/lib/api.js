@@ -24,7 +24,7 @@ api.interceptors.request.use(
   async (config) => {
     const next = { ...config, headers: { ...(config.headers || {}) } }
 
-    // Attach JWT
+    // Attach JWT — getSession() auto-refreshes an expired access token
     const { data } = await supabase.auth.getSession()
     const token    = data?.session?.access_token
 
@@ -50,7 +50,17 @@ api.interceptors.request.use(
 // ── Response interceptor ──────────────────────────────────────────────
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    // 401 — token invalid on the server side.
+    // The request interceptor already refreshes via getSession(), so a 401
+    // that reaches here means the token is genuinely rejected. Sign out and
+    // return to the login page so the user can re-authenticate cleanly.
+    if (error.response?.status === 401) {
+      await supabase.auth.signOut()
+      window.location.replace('/')
+      return Promise.reject(error)
+    }
+
     if (error.code === 'ECONNABORTED') {
       return Promise.reject(
         new Error('Request timed out. The backend may be restarting.')
