@@ -43,13 +43,16 @@ export default function Items() {
 
   const labRequired = isAdmin && requiresLabSelection
 
+  const isLowStockFilter = searchParams.get("filter") === "low-stock"
+
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
 
     try {
+      const params = isLowStockFilter ? { low_stock: 'true' } : {}
       const [itemData, catData] = await Promise.all([
-        fetchItems(),
+        fetchItems(params),
         fetchCategories(),
       ])
 
@@ -61,20 +64,13 @@ export default function Items() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [isLowStockFilter])
 
   useEffect(() => {
     load()
     window.addEventListener("labChanged", load)
     return () => window.removeEventListener("labChanged", load)
   }, [load])
-
-  useEffect(() => {
-    const defaultFilter = searchParams.get("filter")
-    if (defaultFilter === "low-stock") {
-      setSearch("")
-    }
-  }, [searchParams])
 
   const guardedAction = (fn) => {
     if (labRequired) return
@@ -105,10 +101,6 @@ export default function Items() {
           item.sku?.toLowerCase().includes(q)
 
         const matchCat = !catFilter || item.category_id === catFilter
-
-        if (searchParams.get("filter") === "low-stock") {
-          return matchSearch && matchCat && Boolean(item.is_low_stock || item.low_stock)
-        }
 
         return matchSearch && matchCat
       })

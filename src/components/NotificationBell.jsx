@@ -25,13 +25,13 @@ const CATEGORIES = [
   {
     key:   "low_stock",
     label: "Items low on stock",
-    to:    "/items",
+    to:    "/items?filter=low-stock",
     roles: ["LAB_MANAGER", "SUPER_ADMIN", "ADMIN", "STORE_KEEPER"],
   },
   {
     key:   "expiring_soon",
     label: "Batches expiring within 7 days",
-    to:    "/batches",
+    to:    "/batches?filter=expiring",
     roles: ["LAB_MANAGER", "SUPER_ADMIN", "ADMIN", "STORE_KEEPER"],
   },
 ]
