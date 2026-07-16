@@ -17,3 +17,6 @@ export const updateItem = (id, body) =>
 
 export const deleteItem = (id) =>
   api.delete(`/items/${id}`).then(r => r.data)
+
+export const importItems = (rows) =>
+  api.post('/items/import', { rows }).then(r => r.data)

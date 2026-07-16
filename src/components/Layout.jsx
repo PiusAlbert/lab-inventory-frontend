@@ -13,6 +13,7 @@ const NAV_FULL = [
   { to: "/dashboard",    label: "Dashboard",     icon: "⬛" },
   { to: "/categories",   label: "Categories",    icon: "🏷"  },
   { to: "/items",        label: "Items",         icon: "📦" },
+  { to: "/bulk-import",  label: "Import Items",  icon: "📥", managerOnly: true },
   { to: "/batches",      label: "Stock Batches", icon: "🗂"  },
   { to: "/transactions", label: "Transactions",  icon: "↕"  },
   { to: "/reports",      label: "Reports",       icon: "📊" },
