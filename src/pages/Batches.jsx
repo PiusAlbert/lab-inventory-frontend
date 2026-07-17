@@ -90,7 +90,9 @@ export default function StockBatches() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchBatches({ page: p, limit: 50 })
+      const params = { page: p, limit: 50 }
+      if (expiring) params.expiring = 'true'
+      const res = await fetchBatches(params)
       setBatches(Array.isArray(res.data) ? res.data : [])
       setPagination(res.pagination || null)
     } catch (err) {
@@ -98,7 +100,7 @@ export default function StockBatches() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [expiring])
 
   useEffect(() => {
     load(page)

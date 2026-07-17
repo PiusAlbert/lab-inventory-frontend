@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
-import { fetchItems, deleteItem } from "../services/itemsApi"
+import { fetchItems, searchItems, deleteItem } from "../services/itemsApi"
 import { fetchCategories } from "../services/categoriesApi"
 import { useAuth } from "../context/AuthContext"
 import IssueStockModal from "../components/IssueStockModal"
@@ -50,9 +50,10 @@ export default function Items() {
     setError(null)
 
     try {
-      const params = isLowStockFilter ? { low_stock: 'true' } : {}
       const [itemData, catData] = await Promise.all([
-        fetchItems(params),
+        isLowStockFilter
+          ? searchItems({ low_stock: 'true' }).then(r => r.data ?? [])
+          : fetchItems(),
         fetchCategories(),
       ])
 
