@@ -31,7 +31,7 @@ const CATEGORIES = [
   {
     key:   "expiring_soon",
     label: "Batches expiring within 7 days",
-    to:    "/batches?filter=expiring",
+    to:    "/items?filter=expiring",
     roles: ["LAB_MANAGER", "SUPER_ADMIN", "ADMIN", "STORE_KEEPER"],
   },
 ]

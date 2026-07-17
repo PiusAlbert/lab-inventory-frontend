@@ -44,6 +44,7 @@ export default function Items() {
   const labRequired = isAdmin && requiresLabSelection
 
   const isLowStockFilter = searchParams.get("filter") === "low-stock"
+  const isExpiringFilter = searchParams.get("filter") === "expiring"
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -53,7 +54,9 @@ export default function Items() {
       const [itemData, catData] = await Promise.all([
         isLowStockFilter
           ? searchItems({ low_stock: 'true' }).then(r => r.data ?? [])
-          : fetchItems(),
+          : isExpiringFilter
+            ? searchItems({ expiring: 'true' }).then(r => r.data ?? [])
+            : fetchItems(),
         fetchCategories(),
       ])
 
@@ -65,7 +68,7 @@ export default function Items() {
     } finally {
       setLoading(false)
     }
-  }, [isLowStockFilter])
+  }, [isLowStockFilter, isExpiringFilter])
 
   useEffect(() => {
     load()
@@ -145,7 +148,9 @@ export default function Items() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-gray-800">Items</h2>
+          <h2 className="text-xl font-semibold text-gray-800">
+            {isExpiringFilter ? "Expiring Items" : isLowStockFilter ? "Low Stock Items" : "Items"}
+          </h2>
           <p className="text-xs text-gray-400 mt-0.5">
             {filtered.length} item{filtered.length !== 1 ? "s" : ""}
           </p>
@@ -321,6 +326,7 @@ export default function Items() {
               <th className="px-4 py-3">Type</th>
               <th className="px-4 py-3">Category</th>
               <th className="px-4 py-3">Hazard</th>
+              {isExpiringFilter && <th className="px-4 py-3">Nearest Expiry</th>}
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -375,6 +381,23 @@ export default function Items() {
                     <span className="text-gray-300 text-xs">—</span>
                   )}
                 </td>
+
+                {isExpiringFilter && (
+                  <td className="px-4 py-3">
+                    {item.nearest_expiry_date ? (() => {
+                      const days = Math.ceil((new Date(item.nearest_expiry_date) - new Date()) / 86400000)
+                      return (
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          days < 0  ? "bg-red-100 text-red-700"    :
+                          days <= 7 ? "bg-red-50 text-red-600"     :
+                                      "bg-amber-50 text-amber-700"
+                        }`}>
+                          {days < 0 ? "Expired" : `${days}d — ${new Date(item.nearest_expiry_date).toLocaleDateString()}`}
+                        </span>
+                      )
+                    })() : <span className="text-gray-300 text-xs">—</span>}
+                  </td>
+                )}
 
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2 flex-wrap">

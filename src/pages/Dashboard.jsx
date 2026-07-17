@@ -265,7 +265,7 @@ const Dashboard = () => {
           value={expiring_soon.toLocaleString()}
           subtitle="Batches due within 30 days"
           variant={expiring_soon > 0 ? "warning" : "success"}
-          onClick={expiring_soon > 0 ? () => navigate("/batches?filter=expiring") : undefined}
+          onClick={expiring_soon > 0 ? () => navigate("/items?filter=expiring") : undefined}
         />
         <DashboardCard
           title="Inventory Value"
@@ -285,7 +285,7 @@ const Dashboard = () => {
           <InventoryAlerts
             alerts={data}
             onReorder={() => navigate("/items?filter=low-stock")}
-            onReviewExpiring={() => navigate("/batches?filter=expiring")}
+            onReviewExpiring={() => navigate("/items?filter=expiring")}
           />
         </div>
       </div>
