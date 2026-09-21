@@ -86,12 +86,13 @@ export default function StockBatches() {
     fn()
   }
 
-  const load = useCallback(async (p = 1) => {
+  const load = useCallback(async (p = 1, s = search) => {
     setLoading(true)
     setError(null)
     try {
       const params = { page: p, limit: 50 }
-      if (expiring) params.expiring = 'true'
+      if (expiring)  params.expiring = 'true'
+      if (s)         params.search   = s
       const res = await fetchBatches(params)
       setBatches(Array.isArray(res.data) ? res.data : [])
       setPagination(res.pagination || null)
@@ -100,6 +101,7 @@ export default function StockBatches() {
     } finally {
       setLoading(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expiring])
 
   useEffect(() => {
@@ -111,6 +113,13 @@ export default function StockBatches() {
     window.addEventListener("labChanged", handler)
     return () => window.removeEventListener("labChanged", handler)
   }, [load])
+
+  // Debounce search: fire 400 ms after the user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => { setPage(1); load(1, search) }, 400)
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search])
 
   const filtered = batches.filter((b) => {
     const q = search.toLowerCase()
