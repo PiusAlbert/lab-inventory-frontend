@@ -169,7 +169,7 @@ export default function BulkImport() {
               </code>
             </p>
             <p style={{ margin: "8px 0 0", fontSize: "0.78rem", color: "#94a3b8" }}>
-              Valid item_type values: <strong>GENERAL</strong>, <strong>CHEMICAL</strong> (needs hazard_class),{" "}
+              Valid item_type values: <strong>GENERAL</strong>, <strong>CONSUMABLE</strong>, <strong>CHEMICAL</strong> (needs hazard_class),{" "}
               <strong>EQUIPMENT</strong> (needs maintenance_interval_days), <strong>CRM</strong> (needs certification_expiry)
             </p>
           </div>
