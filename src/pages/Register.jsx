@@ -117,7 +117,7 @@ export default function Register() {
           <img src={logoImg} alt="Lab" style={{ width: "42px", height: "42px", borderRadius: "50%", objectFit: "cover" }} />
           <div>
             <p style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#0f172a" }}>Student Registration</p>
-            <p style={{ margin: 0, fontSize: "0.75rem", color: "#64748b" }}>DECOHAS Lab Inventory</p>
+            <p style={{ margin: 0, fontSize: "0.75rem", color: "#64748b" }}>DIST Lab Inventory</p>
           </div>
         </div>
 

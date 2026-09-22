@@ -705,7 +705,7 @@ export default function Layout({ children }) {
                   letterSpacing: "1px",
                 }}
               >
-                DECOHAS
+                DIST
               </span>
               <span style={{ color: "#cbd5e1" }}>/</span>
               <span

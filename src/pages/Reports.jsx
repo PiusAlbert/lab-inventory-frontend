@@ -210,7 +210,7 @@ export default function Reports() {
     if (!report) return
 
     const rows = [
-      ["DECOHAS Labs — Inventory Report"],
+      ["DIST Labs — Inventory Report"],
       [
         `Period: ${report.summary.period} | ${fmt(report.summary.period_start)} → ${fmt(
           report.summary.period_end
@@ -314,7 +314,7 @@ export default function Reports() {
     if (!report) return
 
     const rows = [
-      ["DECOHAS Labs — Inventory Report (Excel-Friendly Export)"],
+      ["DIST Labs — Inventory Report (Excel-Friendly Export)"],
       [
         `Period`,
         report.summary.period,
